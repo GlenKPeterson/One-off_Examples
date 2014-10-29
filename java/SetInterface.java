@@ -83,6 +83,16 @@ public class SetInterface {
         // 1
         // TreeSet with comparator
         // 1
+        
+        // Conclusion:
+        // TreeSet supports context-relative equality by using the comparator's compareTo(a,b)
+        // method.  If it's zero, then the items are equal, regardless of their underlying classes.
+        // OTOH, HashSet (and HashMap) use hashCode() and equals(other), using each object's
+        // "one sided"[1] definition of equality.
+        //
+        // Thank you to Rúnar Óli and Hugues Chabot for pointing this out:
+        // https://twitter.com/hugueschabot/status/444336797779525632
+        
 
 //        doTest("TreeSet natural ordering", new TreeSet<>());
         // TreeSet natural ordering
