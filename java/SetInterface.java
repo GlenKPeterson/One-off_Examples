@@ -29,7 +29,7 @@ public class SetInterface {
             return left.phooey() - right.phooey(); // Not worrying about overflow right now...
         };
     }
-    static class Aye implements Foo, Comparable<Aye> {
+    static class Aye implements Foo { //, Comparable<Aye> {
         private final int phooey;
         public Aye(int p) { phooey = p; }
         @Override public int phooey() { return phooey; }
@@ -44,10 +44,10 @@ public class SetInterface {
             final Aye that = (Aye) other;
             return (this.phooey == that.phooey);
         }
-        @Override public int compareTo(Aye that) { return Foo.COMPARATOR.compare(this, that); }
+//        @Override public int compareTo(Aye that) { return Foo.COMPARATOR.compare(this, that); }
     }
 
-    static class Boo implements Foo, Comparable<Boo> {
+    static class Boo implements Foo { //, Comparable<Boo> {
         private final int phooey;
         public Boo(int p) { phooey = p; }
         @Override public int phooey() { return phooey; }
@@ -62,7 +62,7 @@ public class SetInterface {
             final Boo that = (Boo) other;
             return (this.phooey == that.phooey);
         }
-        @Override public int compareTo(Boo that) { return Foo.COMPARATOR.compare(this, that); }
+//        @Override public int compareTo(Boo that) { return Foo.COMPARATOR.compare(this, that); }
     }
 
     static void doTest(String msg, Set<Foo> fooset) {
@@ -77,13 +77,14 @@ public class SetInterface {
     public static void main(String[] args) {
         doTest("HashSet", new HashSet<>());
         doTest("TreeSet with comparator", new TreeSet<>(Foo.COMPARATOR));
-        doTest("TreeSet natural ordering", new TreeSet<>());
         // Prints out:
         // HashSet
         // 1
         // 1
         // TreeSet with comparator
         // 1
+
+//        doTest("TreeSet natural ordering", new TreeSet<>());
         // TreeSet natural ordering
         // Exception in thread "main" java.lang.ClassCastException: SetInterface$Aye cannot be cast to SetInterface$Boo
         // 	at SetInterface$Boo.compareTo(SetInterface.java:50)
