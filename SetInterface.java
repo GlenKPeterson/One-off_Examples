@@ -28,7 +28,7 @@ public class SetInterface {
         @Override public boolean equals(Object other) {
             if (this == other) { return true; }
             if ( (other == null) ||
-                 !(other instanceof Aye) ||
+                 !(other instanceof Aye) || // Here's the culprit.
                  (this.hashCode() != other.hashCode()) ) {
                 return false;
             }
@@ -45,7 +45,7 @@ public class SetInterface {
         @Override public boolean equals(Object other) {
             if (this == other) { return true; }
             if ( (other == null) ||
-                 !(other instanceof Boo) ||
+                 !(other instanceof Boo) || // Here's the culprit.
                  (this.hashCode() != other.hashCode()) ) {
                 return false;
             }
@@ -61,5 +61,11 @@ public class SetInterface {
         for (Foo foo : fooset) {
             System.out.println(foo.phooey());
         }
+        // Prints:
+        // 1
+        // 1
+        // Showing that there are two items which are equivalent "Foo"s
+        // but their equals method prevents them from being equal.
+        // Really, a set like this should use compareTo(a,b) and consider 0 to mean equals.
     }   
 }
