@@ -13,14 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class SetInterface {
     static interface Foo {
         int phooey();
+
+        public static final Comparator<Foo> COMPARATOR = (left, right) -> {
+            if (left == right) { return 0; }
+            if (left == null) { throw new IllegalArgumentException("Can't compare a null to a value"); }
+            return left.phooey() - right.phooey(); // Not worrying about overflow right now...
+        };
     }
-    static class Aye implements Foo {
+    static class Aye implements Foo, Comparable<Foo> {
         private final int phooey;
         public Aye(int p) { phooey = p; }
         @Override public int phooey() { return phooey; }
@@ -28,16 +37,17 @@ public class SetInterface {
         @Override public boolean equals(Object other) {
             if (this == other) { return true; }
             if ( (other == null) ||
-                 !(other instanceof Aye) || // Here's the culprit.
+                 !(other instanceof Aye) || // Generally correct...
                  (this.hashCode() != other.hashCode()) ) {
                 return false;
             }
             final Aye that = (Aye) other;
             return (this.phooey == that.phooey);
         }
+        @Override public int compareTo(Foo that) { return Foo.COMPARATOR.compare(this, that); }
     }
 
-    static class Boo implements Foo {
+    static class Boo implements Foo, Comparable<Foo> {
         private final int phooey;
         public Boo(int p) { phooey = p; }
         @Override public int phooey() { return phooey; }
@@ -45,27 +55,36 @@ public class SetInterface {
         @Override public boolean equals(Object other) {
             if (this == other) { return true; }
             if ( (other == null) ||
-                 !(other instanceof Boo) || // Here's the culprit.
+                 !(other instanceof Boo) || // Generally correct...
                  (this.hashCode() != other.hashCode()) ) {
                 return false;
             }
             final Boo that = (Boo) other;
             return (this.phooey == that.phooey);
         }
+        @Override public int compareTo(Foo that) { return Foo.COMPARATOR.compare(this, that); }
     }
 
-    public static void main(String[] args) {
-        Set<Foo> fooset = new HashSet<>();
+    static void doTest(String msg, Set<Foo> fooset) {
+        System.out.println(msg);
         fooset.add(new Aye(1));
         fooset.add(new Boo(1));
         for (Foo foo : fooset) {
             System.out.println(foo.phooey());
         }
-        // Prints:
+    }
+
+    public static void main(String[] args) {
+        doTest("HashSet", new HashSet<>());
+        doTest("TreeSet natural ordering", new TreeSet<>());
+        doTest("TreeSet with comparator", new TreeSet<>(Foo.COMPARATOR));
+        // Prints out:
+        // HashSet
         // 1
         // 1
-        // Showing that there are two items which are equivalent "Foo"s
-        // but their equals method prevents them from being equal.
-        // Really, a set like this should use compareTo(a,b) and consider 0 to mean equals.
+        // TreeSet natural ordering
+        // 1
+        // TreeSet with comparator
+        // 1
     }   
 }
