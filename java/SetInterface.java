@@ -29,7 +29,7 @@ public class SetInterface {
             return left.phooey() - right.phooey(); // Not worrying about overflow right now...
         };
     }
-    static class Aye implements Foo, Comparable<Foo> {
+    static class Aye implements Foo, Comparable<Aye> {
         private final int phooey;
         public Aye(int p) { phooey = p; }
         @Override public int phooey() { return phooey; }
@@ -44,10 +44,10 @@ public class SetInterface {
             final Aye that = (Aye) other;
             return (this.phooey == that.phooey);
         }
-        @Override public int compareTo(Foo that) { return Foo.COMPARATOR.compare(this, that); }
+        @Override public int compareTo(Aye that) { return Foo.COMPARATOR.compare(this, that); }
     }
 
-    static class Boo implements Foo, Comparable<Foo> {
+    static class Boo implements Foo, Comparable<Boo> {
         private final int phooey;
         public Boo(int p) { phooey = p; }
         @Override public int phooey() { return phooey; }
@@ -62,7 +62,7 @@ public class SetInterface {
             final Boo that = (Boo) other;
             return (this.phooey == that.phooey);
         }
-        @Override public int compareTo(Foo that) { return Foo.COMPARATOR.compare(this, that); }
+        @Override public int compareTo(Boo that) { return Foo.COMPARATOR.compare(this, that); }
     }
 
     static void doTest(String msg, Set<Foo> fooset) {
@@ -76,15 +76,20 @@ public class SetInterface {
 
     public static void main(String[] args) {
         doTest("HashSet", new HashSet<>());
-        doTest("TreeSet natural ordering", new TreeSet<>());
         doTest("TreeSet with comparator", new TreeSet<>(Foo.COMPARATOR));
+        doTest("TreeSet natural ordering", new TreeSet<>());
         // Prints out:
         // HashSet
         // 1
         // 1
-        // TreeSet natural ordering
-        // 1
         // TreeSet with comparator
         // 1
+        // TreeSet natural ordering
+        // Exception in thread "main" java.lang.ClassCastException: SetInterface$Aye cannot be cast to SetInterface$Boo
+        // 	at SetInterface$Boo.compareTo(SetInterface.java:50)
+        // 	at java.util.TreeMap.put(TreeMap.java:568)
+        // 	at java.util.TreeSet.add(TreeSet.java:255)
+        // 	at SetInterface.doTest(SetInterface.java:71)
+        // 	at SetInterface.main(SetInterface.java:80)
     }   
 }
