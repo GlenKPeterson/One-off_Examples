@@ -72,6 +72,8 @@ public class SetInterface {
         for (Foo foo : fooset) {
             System.out.println(foo.phooey());
         }
+        System.out.println("fooset.contains(new Aye(1)): " + fooset.contains(new Aye(1)));
+        System.out.println("fooset.contains(new Boo(1)): " + fooset.contains(new Boo(1)));
     }
 
     public static void main(String[] args) {
@@ -81,22 +83,31 @@ public class SetInterface {
         // HashSet
         // 1
         // 1
+        // fooset.contains(new Aye(1)): true
+        // fooset.contains(new Boo(1)): true
         // TreeSet with comparator
         // 1
-        
+        // fooset.contains(new Aye(1)): true
+        // fooset.contains(new Boo(1)): true
+
         // Conclusion:
         // TreeSet supports context-relative equality by using the comparator's compareTo(a,b)
         // method.  If it's zero, then the items are equal, regardless of their underlying classes.
         // OTOH, HashSet (and HashMap) use hashCode() and equals(other), using each object's
         // "one sided"[1] definition of equality.
         //
-        // Thank you to Rúnar Óli and Hugues Chabot for pointing this out:
+        // [1] Thank you to Rúnar Óli and Hugues Chabot for pointing this out:
         // https://twitter.com/hugueschabot/status/444336797779525632
         
+        // Blows up:
+        // Exception in thread "main" java.lang.ClassCastException:
+        //         SetInterface$Aye cannot be cast to java.lang.Comparable
+        // doTest("TreeSet without comparator", new TreeSet<>());
 
 //        doTest("TreeSet natural ordering", new TreeSet<>());
         // TreeSet natural ordering
-        // Exception in thread "main" java.lang.ClassCastException: SetInterface$Aye cannot be cast to SetInterface$Boo
+        // Exception in thread "main" java.lang.ClassCastException:
+        //         SetInterface$Aye cannot be cast to SetInterface$Boo
         // 	at SetInterface$Boo.compareTo(SetInterface.java:50)
         // 	at java.util.TreeMap.put(TreeMap.java:568)
         // 	at java.util.TreeSet.add(TreeSet.java:255)
