@@ -55,7 +55,8 @@ public class FunctionComparison {
         private final U u;
 
         // public constructors are poor style, but this is a simple example.
-        // I think this is Daniel's: a -> (b -> c)
+        // This is like Daniel's: a -> (b -> c)
+        // Only it's actually c -> (b -> c)
         public ConstFuncEqMeth(U au) { u = au; }
 
         @Override public U constantValue() { return u; }
@@ -90,7 +91,8 @@ public class FunctionComparison {
         private ConstFuncEqOp(U au) { u = au; }
 
         // public factory method
-        // I think this is Daniel's: a -> (b -> c)
+        // This is like Daniel's: a -> (b -> c)
+        // Only it's effectively c -> (b -> c)
         @SuppressWarnings("unchecked")
         public static synchronized <A,B> ConstFuncEqOp<A,B> of(B b) {
             ConstFuncEqOp<A,B> ret = (ConstFuncEqOp<A,B>) instances.get(b);
