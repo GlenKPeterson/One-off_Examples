@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-Sometimes you can find a decidable slice of a problem domain
+Sometimes you can find a decidable slice of an undecidable problem domain
 https://twitter.com/djspiewak/status/555479647303892992
 
 Function Equality is not decidable in general, but it is for
