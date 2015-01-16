@@ -34,29 +34,34 @@ of these examples works for an un-computable codomain.
 public class FunctionComparison {
 
     // Java 8 Functional Interface (using apply())
-    // A constant function returns the same value no matter what it is passed.
-    // This assumes that constant functions are meaningfully equal if the
-    // constant return value is equal.
-    // Maybe this would be clearer as a 0-argument "thunk" but I made 
-    // this a one-argument function and it works.  Good enough for now...
-    public static interface ConstantFunction<T,U> {
+    // A "Constant Function" always returns the same value.  This
+    // implementation takes no argument, so it's also a "Thunk."  Thunks are
+    // normally used for delayed evaluation, but calling constantValue()
+    // evaluates the contained object, so practical application is limited.
+    // This could also be expanded to take (and ignore) any number of
+    // arguments.
+    //
+    // Assumes that constant functions are meaningfully equal if the
+    // constant return value is equal.  Implementations need to be pure for
+    // that to be the case.
+    public static interface ConstantFunction<U> {
         // This is a way to get at the constant return value so
         // we can implement equals
         U constantValue();
 
         // The functional method
-        default U apply(T t) { return constantValue(); }
+        default U apply() { return constantValue(); }
     }
 
     // First example implementing class uses equals() for comparason
-    public static class ConstFuncEqMeth<T,U> implements ConstantFunction<T,U> {
+    public static class ConstFuncEqMeth<U> implements ConstantFunction<U> {
 
         // instance variable holding the constant return
         private final U u;
 
         // public constructors are poor style, but this is a simple example.
         // This is like Daniel's: a -> (b -> c)
-        // Only it's actually c -> (b -> c)
+        // Only it's actually c -> (() -> c)
         public ConstFuncEqMeth(U au) { u = au; }
 
         @Override public U constantValue() { return u; }
@@ -70,14 +75,14 @@ public class FunctionComparison {
                  (this.hashCode() != other.hashCode()) ) {
                 return false;
             }
-            ConstFuncEqMeth<?,?> that = (ConstFuncEqMeth<?,?>) other;
+            ConstFuncEqMeth<?> that = (ConstFuncEqMeth<?>) other;
             return this.constantValue().equals(that.constantValue());
         }
     }
 
     // Second example implementing class uses controlled instances and
     // == for comparason
-    public static class ConstFuncEqOp<T,U> implements ConstantFunction<T,U> {
+    public static class ConstFuncEqOp<U> implements ConstantFunction<U> {
 
         // Cache of all instances (can fill up memory eventually).
         // This may effectively be the codomain, but I'm considering it the
@@ -92,12 +97,12 @@ public class FunctionComparison {
 
         // public factory method
         // This is like Daniel's: a -> (b -> c)
-        // Only it's effectively c -> (b -> c)
+        // Only it's effectively c -> (() -> c)
         @SuppressWarnings("unchecked")
-        public static synchronized <A,B> ConstFuncEqOp<A,B> of(B b) {
-            ConstFuncEqOp<A,B> ret = (ConstFuncEqOp<A,B>) instances.get(b);
+        public static synchronized <B> ConstFuncEqOp<B> of(B b) {
+            ConstFuncEqOp<B> ret = (ConstFuncEqOp<B>) instances.get(b);
             if (ret == null) {
-                ret = new ConstFuncEqOp<A,B>(b);
+                ret = new ConstFuncEqOp<B>(b);
                 instances.put(b, ret);
             }
             return ret;
@@ -112,12 +117,12 @@ public class FunctionComparison {
     // Main
     // "The proof of the pudding is in the eating"
     public static void main(String... args) {
-        println("Comparing different constant functions on a non computable " +
+        println("Comparing different constant functions on a non-computable " +
                 "codomain using equals()");
         println(new ConstFuncEqMeth<>(BigInteger.valueOf(2938472394872398423L))
                        .equals(new ConstFuncEqMeth<>(BigInteger.valueOf(33))));
 
-        println("Comparing 'equal' constant functions on a non computable " +
+        println("Comparing 'equal' constant functions on a non-computable " +
                 "codomain using equals()");
         println(new ConstFuncEqMeth<>(BigInteger.valueOf(33))
                        .equals(new ConstFuncEqMeth<>(BigInteger.valueOf(33))));
@@ -125,12 +130,12 @@ public class FunctionComparison {
         println("");
         println("Maybe you consider the instances a computable codomain, " +
                 "but if we consider it the range...");
-        println("Comparing different constant functions on a non computable " +
+        println("Comparing different constant functions on a non-computable " +
                 "codomain using ==");
         println(ConstFuncEqOp.of(BigInteger.valueOf(2938472394872398423L)) ==
                 ConstFuncEqOp.of(BigInteger.valueOf(33)));
 
-        println("Comparing 'equal' constant functions on a non computable " +
+        println("Comparing 'equal' constant functions on a non-computable " +
                 "codomain using ==");
         println(ConstFuncEqOp.of(BigInteger.valueOf(33)) ==
                 ConstFuncEqOp.of(BigInteger.valueOf(33)));
