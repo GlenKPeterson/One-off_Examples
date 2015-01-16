@@ -110,6 +110,7 @@ public class FunctionComparison {
     static void println(Object o) { System.out.println(o); }
 
     // Main
+    // "The proof of the pudding is in the eating"
     public static void main(String... args) {
         println("Comparing different constant functions on a non computable " +
                 "codomain using equals()");
