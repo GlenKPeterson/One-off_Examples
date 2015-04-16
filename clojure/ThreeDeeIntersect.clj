@@ -31,9 +31,9 @@
                               (Math/pow r 2.0))
                 av (Math/abs dSphere)
                ]
-               (print (cond (< av 1) "@"  ;; Exact intersect - darkest symbol
-                            (< av 10) "*" ;; Near miss - lighter symbol
-                            (< av 40) "'" ;; Distant miss - lightest symbol
+               (print (cond (< av 1) "@"  ;; Centered on charracter - darkest symbol
+                            (< av 10) "*" ;; Almost centered - lighter symbol
+                            (< av 40) "'" ;; Within 1/2 character - lightest symbol
                             (= 0 (rem x 10)) (if (= 0 (rem y 10)) "+" "|") ;; Vertical grid line
                             (= 0 (rem y 10)) "-" ;; Horizontal grid line
                             :else " "))))        ;; Background
