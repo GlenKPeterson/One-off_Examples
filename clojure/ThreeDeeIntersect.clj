@@ -34,9 +34,9 @@
                (print (cond (< av 1) "@"  ;; Exact intersect - darkest symbol
                             (< av 10) "*" ;; Near miss - lighter symbol
                             (< av 40) "'" ;; Distant miss - lightest symbol
-                            (= 0 (rem x 10)) "|" ;; Show vertical grid line
-                            (= 0 (rem y 10)) "-" ;; Show horizontal grid line
-                            :else " "))))        ;; Just a spacer.
+                            (= 0 (rem x 10)) (if (= 0 (rem y 10)) "+" "|") ;; Vertical grid line
+                            (= 0 (rem y 10)) "-" ;; Horizontal grid line
+                            :else " "))))        ;; Background
         (println))) ;; On to next line...
 
 ;; Actually "play" the "movie", moving the sphere through the screen over time.
