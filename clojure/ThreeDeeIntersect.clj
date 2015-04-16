@@ -18,9 +18,10 @@
       "Displays the intersection of the given sphere (x, y, z) center points
        and radius r against the plane z=0 in somewhat anti-aliased ASCII art"
       [h k l r]
+      ;; Label the X axis
       (println ";;  y|     x=10|       20|       30|       40|       50|       60|       70|       80|       90|")
       (dotimes [y 44]
-        (print ";;" (if (< y 10) (str " " y) y))
+        (print ";;" (if (< y 10) (str " " y) y)) ;; Y-axis labels
         (dotimes [x 94]
           (let [z 0
                 ;; [(x-h)^2 + (y-k)^2 + (z-l)^2] - r^2
@@ -30,17 +31,22 @@
                               (Math/pow r 2.0))
                 av (Math/abs dSphere)
                ]
-               (print (cond (< av 0) " "
-                            (< av 1) "@"
-                            (< av 10) "*"
-                            (< av 40) "'"
-                            (= 0 (rem x 10)) "|"
-                            (= 0 (rem y 10)) "-"
-                            :else " "))))
-        (println)))
+               (print (cond (< av 0) " "  ;; No intersection
+                            (< av 1) "@"  ;; Exact intersect - darkest symbol
+                            (< av 10) "*" ;; Near miss - lighter symbol
+                            (< av 40) "'" ;; Distant miss - lightest symbol
+                            (= 0 (rem x 10)) "|" ;; Show vertical grid line
+                            (= 0 (rem y 10)) "-" ;; Show horizontal grid line
+                            :else " "))))        ;; Just a spacer.
+        (println))) ;; On to next line...
 
+;; Actually "play" the "movie", moving the sphere through the screen over time.
 (dotimes [t 61]
          (showSphere (+ 40 (* 20 (Math/sin (* t (/ Math/PI 30))))) 
                      (+ 20 (* 10 (Math/cos (* t (/ Math/PI 20)))))
                      (- t 30) 30)
-         (Thread/sleep (if (< t 7) (- 300 (* 30 t)) 150)))
+         (Thread/sleep (if (< t 11)          ;; First few frames slower
+                           (let [n (- 17 t)]         
+                                (* n n 4))
+                           150)))            ;; Subsequent frames faster
+
