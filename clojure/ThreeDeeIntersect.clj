@@ -39,11 +39,9 @@
         (println))) ;; On to next line...
 
 ;; Actually "play" the "movie", moving the sphere through the screen over time.
-(dotimes [t 61]
+(dotimes [t 80]
          (showSphere (+ 40 (* 20 (Math/sin (* t (/ Math/PI 30))))) 
                      (+ 20 (* 10 (Math/cos (* t (/ Math/PI 20)))))
-                     (- t 30) 30.1)
-         (Thread/sleep (if (< t 11)          ;; First few frames slower
-                           (let [n (- 17 t)]         
-                                (* n n 4))
-                           150)))            ;; Subsequent frames faster
+                     (+ 20 (* 10 (Math/cos (* t (/ Math/PI 20)))))
+                      30.1)
+         (Thread/sleep 150))
