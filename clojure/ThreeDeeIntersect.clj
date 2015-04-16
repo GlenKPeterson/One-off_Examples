@@ -29,11 +29,10 @@
                               (Math/pow (- y k) 2.0)
                               (Math/pow (- z l) 2.0)) 
                               (Math/pow r 2.0))
-                av (Math/abs dSphere)
+                dist (- 0 dSphere)
                ]
-               (print (cond (< av 1) "@"  ;; Centered on charracter - darkest symbol
-                            (< av 10) "*" ;; Almost centered - lighter symbol
-                            (< av 40) "'" ;; Within 1/2 character - lightest symbol
+               (print (cond (and (> dist 0) (< dist 20)) "*" ;; Almost centered - lighter symbol
+                            (and (> dist 0) (< dist 70)) "'" ;; Within 1/2 character - lightest
                             (= 0 (rem x 10)) (if (= 0 (rem y 10)) "+" "|") ;; Vertical grid line
                             (= 0 (rem y 10)) "-" ;; Horizontal grid line
                             :else " "))))        ;; Background
@@ -43,9 +42,8 @@
 (dotimes [t 61]
          (showSphere (+ 40 (* 20 (Math/sin (* t (/ Math/PI 30))))) 
                      (+ 20 (* 10 (Math/cos (* t (/ Math/PI 20)))))
-                     (- t 30) 30)
+                     (- t 30) 30.1)
          (Thread/sleep (if (< t 11)          ;; First few frames slower
                            (let [n (- 17 t)]         
                                 (* n n 4))
                            150)))            ;; Subsequent frames faster
-
