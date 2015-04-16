@@ -12,8 +12,8 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-;; You really want a terminal 100 chars wide by exactly 45 high to see this
-;; properly.
+;; You really want a terminal at least 100 chars wide and
+;; exactly 46 high to see this properly.
 (defn showSphere
       "Displays the intersection of the given sphere (x, y, z) center points
        and radius r against the plane z=0 in somewhat anti-aliased ASCII art"
