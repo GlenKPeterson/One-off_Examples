@@ -31,8 +31,7 @@
                               (Math/pow r 2.0))
                 av (Math/abs dSphere)
                ]
-               (print (cond (< av 0) " "  ;; No intersection
-                            (< av 1) "@"  ;; Exact intersect - darkest symbol
+               (print (cond (< av 1) "@"  ;; Exact intersect - darkest symbol
                             (< av 10) "*" ;; Near miss - lighter symbol
                             (< av 40) "'" ;; Distant miss - lightest symbol
                             (= 0 (rem x 10)) "|" ;; Show vertical grid line
