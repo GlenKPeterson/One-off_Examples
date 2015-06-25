@@ -16,7 +16,7 @@ package org.organicdesign.fp.experiments;
 import org.organicdesign.fp.FunctionUtils;
 import org.organicdesign.fp.Option;
 import org.organicdesign.fp.collections.ImList;
-import org.organicdesign.fp.collections.UnListIterator;
+import org.organicdesign.fp.collections.UnmodListIterator;
 import org.organicdesign.fp.tuple.Tuple2;
 
 // TODO: This isn't anything yet.
@@ -296,7 +296,7 @@ public class PersistentVectorInsertable<V> implements ImList<V> {
     }
 
     /** {@inheritDoc} */
-    @Override public ImList<V> append(V v) { return insert(tree.totalSize, v); }
+    @Override public ImList<V> appendOne(V v) { return insert(tree.totalSize, v); }
 
     @Override public PersistentVectorInsertable<V> insert(int idx, V v) {
         if (tree == null) {
@@ -322,7 +322,7 @@ public class PersistentVectorInsertable<V> implements ImList<V> {
     }
 
     /** {@inheritDoc} */
-    @Override public ImList<V> put(int idx, V v) {
+    @Override public ImList<V> replace(int idx, V v) {
         // TODO: Implement (after renaming to replace to differentiate from insert)
         throw new UnsupportedOperationException("Not implemented yet");
     }
@@ -341,7 +341,7 @@ public class PersistentVectorInsertable<V> implements ImList<V> {
     }
 
     /** {@inheritDoc} */
-    @Override public UnListIterator<V> listIterator(int index) {
+    @Override public UnmodListIterator<V> listIterator(int index) {
         // TODO: Implement
         throw new UnsupportedOperationException("Not implemented yet");
     }

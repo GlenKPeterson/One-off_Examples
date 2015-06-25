@@ -13,8 +13,8 @@
 
 package org.organicdesign.fp.experiments;
 
-import org.organicdesign.fp.collections.UnIterable;
-import org.organicdesign.fp.collections.UnIterator;
+import org.organicdesign.fp.collections.UnmodSortedIterable;
+import org.organicdesign.fp.collections.UnmodSortedIterator;
 import org.organicdesign.fp.experiments.math.Rational;
 
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ import java.util.List;
 
  Does NOT handle an infinite range (yet).
  */
-public class IntRange implements UnIterable<Long> {
+public class IntRange implements UnmodSortedIterable<Long> {
     private final long start;
     private final long end;
     private final long size;
@@ -122,8 +122,8 @@ public class IntRange implements UnIterable<Long> {
      * {@inheritDoc}
      */
     @Override
-    public UnIterator<Long> iterator() {
-        return new UnIterator<Long>() {
+    public UnmodSortedIterator<Long> iterator() {
+        return new UnmodSortedIterator<Long>() {
             long s = start;
             @Override public boolean hasNext() { return s < end; }
             @Override public Long next() { s = s + 1; return s; }

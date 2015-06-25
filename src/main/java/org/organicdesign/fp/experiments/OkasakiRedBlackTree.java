@@ -13,9 +13,9 @@
 // limitations under the License.
 package org.organicdesign.fp.experiments;
 
-import java.util.Comparator;
+import org.organicdesign.fp.collections.UnmodMap;
 
-import org.organicdesign.fp.collections.UnMap;
+import java.util.Comparator;
 
 /**
  Based on "Purely Functional Data Structures" by Chris Okasaki, p. 24-28.  Mistakes are my own.
@@ -23,7 +23,7 @@ import org.organicdesign.fp.collections.UnMap;
  based on RRB-trees, but that turned out to be a very slightly non-standard B-Tree, and not very much like a Red Black
  Tree at all.
  */
-public abstract class OkasakiRedBlackTree<K,V> implements UnMap.UnEntry<K,V> {
+public abstract class OkasakiRedBlackTree<K,V> implements UnmodMap.UnEntry<K,V> {
     final OkasakiRedBlackTree<K,V> left;
     final K key;
     final V value;
@@ -52,7 +52,7 @@ public abstract class OkasakiRedBlackTree<K,V> implements UnMap.UnEntry<K,V> {
         public String toString() { return "Black(" + left + "," + key + "," + right + ")"; }
     }
 
-    private static <K,V> boolean member(Comparator<? super K> comp, UnMap.UnEntry<K,V> elem,
+    private static <K,V> boolean member(Comparator<? super K> comp, UnmodMap.UnEntry<K,V> elem,
                                         OkasakiRedBlackTree<K,V> node) {
         if (node == null) { return false; }
         int c = comp.compare(elem.getKey(), node.key);
@@ -118,7 +118,7 @@ public abstract class OkasakiRedBlackTree<K,V> implements UnMap.UnEntry<K,V> {
         return node;
     }
 
-    private static <K,V> OkasakiRedBlackTree<K,V> insert(Comparator<? super K> comp, UnMap.UnEntry<K,V> elem,
+    private static <K,V> OkasakiRedBlackTree<K,V> insert(Comparator<? super K> comp, UnmodMap.UnEntry<K,V> elem,
                                                          OkasakiRedBlackTree<K,V> node) {
         if (node == null) {
             return new Black<>(null, elem.getKey(), elem.getValue(), null); // Should this be Red?
