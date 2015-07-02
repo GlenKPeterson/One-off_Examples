@@ -41,14 +41,14 @@ public class IntRange implements UnmodSortedIterable<Long> {
         return new IntRange(s, e);
     }
 
-    public static IntRange of(Long s, Long e) {
+    public static IntRange of(Number s, Number e) {
         if ((s == null) || (e == null)) {
             throw new IllegalArgumentException("Nulls not allowed");
         }
         return new IntRange(s.longValue(), e.longValue());
     }
 
-    public static IntRange of(int s, int e) { return of((long) s, (long) e); }
+//    public static IntRange of(int s, int e) { return of((long) s, (long) e); }
 
     public long start() { return start; }
     public long end() { return end; }
@@ -123,6 +123,7 @@ public class IntRange implements UnmodSortedIterable<Long> {
      */
     @Override
     public UnmodSortedIterator<Long> iterator() {
+        // TODO: this is exclusive of both endpoints.  I would think inclusive would be better, or subclasses RangeIncExc, RangeExcInc, RangeIncInc, RangeExcExc
         return new UnmodSortedIterator<Long>() {
             long s = start;
             @Override public boolean hasNext() { return s < end; }

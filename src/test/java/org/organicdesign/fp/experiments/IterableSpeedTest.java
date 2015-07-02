@@ -9,6 +9,7 @@ import org.organicdesign.fp.permanent.Sequence;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 
 import static org.organicdesign.fp.StaticImports.unmod;
@@ -322,8 +323,8 @@ public class IterableSpeedTest {
 
     @Test public void speedTest() {
         // This is the real/better test.  Really should comment this whole thing out as it's just an experiment.
-//        int MAX = 30000000;
-        int MAX = 500000;
+      int MAX = 30000000;
+//        int MAX = 500000;
         long startTime;
 
         startTime = System.currentTimeMillis();
@@ -336,6 +337,11 @@ public class IterableSpeedTest {
         for (int i = 0; i < MAX; i++) {
             ls[i] = Long.valueOf(i);
         }
+        System.out.println((System.currentTimeMillis() - startTime));
+
+        System.out.print("List construction: ");
+        startTime = System.currentTimeMillis();
+        List<Long> lsList = Arrays.asList(ls);
         System.out.println((System.currentTimeMillis() - startTime));
 
         Function0<Long> forLoop = () -> {
@@ -352,9 +358,7 @@ public class IterableSpeedTest {
         benchmark("SeqFromArray1", () -> {
             Sequence<Long> s1 = Sequence.of(ls);
             while (s1.head().isSome()) {
-                if (s1.head().get() < -1) {
-                    break;
-                }
+                if (s1.head().get() < -1) { break; }
                 s1 = s1.tail();
             }
             return s1.head().getOrElse(0L);
@@ -412,7 +416,7 @@ public class IterableSpeedTest {
         });
 
         benchmark("List Iterator", () -> {
-            Iterator<Long> iter = Arrays.asList(ls).iterator();
+            Iterator<Long> iter = lsList.iterator();
             Long l = null;
             while (iter.hasNext()) {
                 l = iter.next();
@@ -431,7 +435,7 @@ public class IterableSpeedTest {
         });
 
         benchmark("unmodArrayItr", () -> {
-            Iterator<Long> iter = unmod(Arrays.asList(ls)).iterator();
+            Iterator<Long> iter = unmod(lsList).iterator();
             Long l = null;
             while (iter.hasNext()) {
                 l = iter.next();
@@ -458,13 +462,20 @@ public class IterableSpeedTest {
         benchmark("SeqFromArray1", () -> {
             Sequence<Long> s1 = Sequence.of(ls);
             while (s1.head().isSome()) {
-                if (s1.head().get() < -1) {
-                    break;
-                }
+                if (s1.head().get() < -1) { break; }
                 s1 = s1.tail();
             }
             return s1.head().getOrElse(0L);
         });
 
+        benchmark("Transform4List", () -> {
+            Transform4<Long> t = Transform4.fromList(lsList);
+            return t.foldLeft(0L, (accum, i) -> i < -1 ? i : accum);
+        });
+
+        benchmark("Transform4Array", () -> {
+            Transform4<Long> t = Transform4.fromArray(ls);
+            return t.foldLeft(0L, (accum, i) -> i < -1 ? i : accum);
+        });
     }
 }
