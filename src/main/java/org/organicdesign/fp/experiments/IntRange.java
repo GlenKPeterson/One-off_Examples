@@ -103,19 +103,15 @@ public class IntRange implements UnmodSortedIterable<Long> {
 
     @Override
     public boolean equals(Object other) {
-        // Cheapest operation first...
+        // Cheapest operations first...
         if (this == other) { return true; }
+        if ( !(other instanceof IntRange) ) { return false; }
 
-        if ( (other == null) ||
-             !(other instanceof IntRange) ||
-             (this.hashCode() != other.hashCode()) ) {
-            return false;
-        }
         // Details...
         final IntRange that = (IntRange) other;
-        // If this is not a database object, compare "significant" fields here.
+        // This is not a database object; compare "significant" fields here.
         return (this.start == that.start) &&
-                (this.end == that.end);
+               (this.end == that.end);
     }
 
     /**
@@ -126,8 +122,12 @@ public class IntRange implements UnmodSortedIterable<Long> {
         // TODO: this is exclusive of both endpoints.  I would think inclusive would be better, or subclasses RangeIncExc, RangeExcInc, RangeIncInc, RangeExcExc
         return new UnmodSortedIterator<Long>() {
             long s = start;
-            @Override public boolean hasNext() { return s < end; }
-            @Override public Long next() { s = s + 1; return s; }
+            @Override public boolean hasNext() { return s <= end; }
+            @Override public Long next() {
+                Long t = s;
+                s = s + 1;
+                return t;
+            }
         };
     }
 }

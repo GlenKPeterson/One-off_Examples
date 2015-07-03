@@ -323,8 +323,8 @@ public class IterableSpeedTest {
 
     @Test public void speedTest() {
         // This is the real/better test.  Really should comment this whole thing out as it's just an experiment.
-      int MAX = 30000000;
-//        int MAX = 500000;
+//      int MAX = 30000000;
+        int MAX = 500000;
         long startTime;
 
         startTime = System.currentTimeMillis();
