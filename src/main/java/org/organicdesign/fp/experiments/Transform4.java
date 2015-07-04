@@ -44,13 +44,13 @@ public interface Transform4<A> { // extends Transformable<A> {
          */
         DropStrategy drop(int d);
 
-        /**
-         Takes as many items as the source can handle.
-         @param t the number of items to take.
-         @return the number of "takes" left over when this source is exhausted (flatMap needs to know this).
-         0 if t &lt;= the number of items left in the source.  Otherwise returns t - numItemsActuallyTaken
-         */
-        DropStrategy take(int t);
+//        /**
+//         Takes as many items as the source can handle.
+//         @param t the number of items to take.
+//         @return the number of "takes" left over when this source is exhausted (flatMap needs to know this).
+//         0 if t &lt;= the number of items left in the source.  Otherwise returns t - numItemsActuallyTaken
+//         */
+//        DropStrategy take(int t);
 
         class MutableListSource<T> extends OpRun implements MutableSource<T> {
             final List<T> items;
@@ -83,21 +83,21 @@ public interface Transform4<A> { // extends Transformable<A> {
                 return DropStrategy.HANDLE_INTERNALLY;
             }
 
-            /** {@inheritDoc} */
-            @Override public DropStrategy take(int t) {
-                // Taking none is equivalent to an empty source.
-                if (t < 1) {
-                    idx = size;
-                    return DropStrategy.HANDLE_INTERNALLY;
-                }
-
-                // Taking more items than we have is not possible.  Just take all in that case.
-                int numItems = size - idx;
-                if (t < numItems) {
-                    size = idx + t;
-                }
-                return DropStrategy.HANDLE_INTERNALLY;
-            }
+//            /** {@inheritDoc} */
+//            @Override public DropStrategy take(int t) {
+//                // Taking none is equivalent to an empty source.
+//                if (t < 1) {
+//                    idx = size;
+//                    return DropStrategy.HANDLE_INTERNALLY;
+//                }
+//
+//                // Taking more items than we have is not possible.  Just take all in that case.
+//                int numItems = size - idx;
+//                if (t < numItems) {
+//                    size = idx + t;
+//                }
+//                return DropStrategy.HANDLE_INTERNALLY;
+//            }
 
             @Override public String toString() {
                 return "MutableListSource(idx:" + idx + ",size:" + size + ")";
@@ -136,10 +136,10 @@ public interface Transform4<A> { // extends Transformable<A> {
                 return DropStrategy.HANDLE_INTERNALLY;
             }
 
-            /** {@inheritDoc} */
-            @Override public DropStrategy take(int t) {
-                return DropStrategy.CANNOT_HANDLE;
-            }
+//            /** {@inheritDoc} */
+//            @Override public DropStrategy take(int t) {
+//                return DropStrategy.CANNOT_HANDLE;
+//            }
         } // end class MutableIterableSource
 
         // This was no faster.
@@ -268,7 +268,8 @@ public interface Transform4<A> { // extends Transformable<A> {
 
      @param <G> the input type for this OpDesc.
      */
-    static abstract class OpDesc<G> implements Transform4<G> {
+//    static
+    abstract class OpDesc<G> implements Transform4<G> {
         final OpDesc prevOp;
 //        final int drop;
 //        final int take;
