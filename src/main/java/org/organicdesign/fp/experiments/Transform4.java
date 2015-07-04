@@ -8,6 +8,7 @@ import org.organicdesign.fp.function.Function2;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 // We model this as a linked list so that each transition can have it's own output type, building a type-safe bridge
@@ -16,7 +17,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 
     // TODO: Need to ensure that take comes after drop!
 
-    enum DropStrategy { HANDLE_INTERNALLY, ASK_SUPPLIER, CANNOT_DROP; }
+    enum DropStrategy { HANDLE_INTERNALLY, ASK_SUPPLIER, CANNOT_HANDLE; }
 
     interface MutableSourceProvider<T> extends UnmodIterable<T> {
         @Override MutableSource<T> iterator();
@@ -49,7 +50,7 @@ public interface Transform4<A> { // extends Transformable<A> {
          @return the number of "takes" left over when this source is exhausted (flatMap needs to know this).
          0 if t &lt;= the number of items left in the source.  Otherwise returns t - numItemsActuallyTaken
          */
-        int take(int t);
+        DropStrategy take(int t);
 
         class MutableListSource<T> extends OpRun implements MutableSource<T> {
             final List<T> items;
@@ -83,24 +84,63 @@ public interface Transform4<A> { // extends Transformable<A> {
             }
 
             /** {@inheritDoc} */
-            @Override public int take(int t) {
+            @Override public DropStrategy take(int t) {
                 // Taking none is equivalent to an empty source.
                 if (t < 1) {
                     idx = size;
-                    return 0;
+                    return DropStrategy.HANDLE_INTERNALLY;
                 }
 
+                // Taking more items than we have is not possible.  Just take all in that case.
                 int numItems = size - idx;
-                if (t > numItems) {
-                    // Taking more items doesn't affect us, it only affects the caller.  Just
-                    // adjust their total by the number that we can handle.
-                    return t - numItems;
-                } // Can take them all.
+                if (t < numItems) {
+                    size = idx + t;
+                }
+                return DropStrategy.HANDLE_INTERNALLY;
+            }
 
-                size = idx + t;
-                return 0;
+            @Override public String toString() {
+                return "MutableListSource(idx:" + idx + ",size:" + size + ")";
             }
         } // end class MutableListSource
+
+        class MutableIterableSource<T> extends OpRun implements MutableSource<T> {
+            final Iterator<T> items;
+            int drop = 0;
+
+            MutableIterableSource(Iterable<T> ls) { items = ls.iterator(); }
+
+            private void doDrop() {
+                while ((drop > 0) && items.hasNext()) {
+                    drop = drop - 1;
+                    items.next();
+                }
+            }
+
+            /** {@inheritDoc} */
+            @Override public boolean hasNext() {
+                if (drop > 0) { doDrop(); }
+                return items.hasNext();
+            }
+
+            /** {@inheritDoc} */
+            @Override public T next() {
+                if (drop > 0) { doDrop(); }
+                return items.next();
+            }
+
+            /** {@inheritDoc} */
+            @Override public DropStrategy drop(int d) {
+                if (d < 1) { return DropStrategy.HANDLE_INTERNALLY; }
+                drop = drop + d;
+                return DropStrategy.HANDLE_INTERNALLY;
+            }
+
+            /** {@inheritDoc} */
+            @Override public DropStrategy take(int t) {
+                return DropStrategy.CANNOT_HANDLE;
+            }
+        } // end class MutableIterableSource
 
         // This was no faster.
 //        class MutableArraySource<T> extends OpRun implements MutableSource<T> {
@@ -171,7 +211,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 
         private static class FilterRun extends OpRun {
             FilterRun(Function1<Object,Boolean> func) { filter = func; }
-            @Override public DropStrategy drop(int num) { return DropStrategy.CANNOT_DROP; }
+            @Override public DropStrategy drop(int num) { return DropStrategy.CANNOT_HANDLE; }
         }
 
         private static class MapRun extends OpRun {
@@ -184,7 +224,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 //            int numToDrop = 0;
 
             FlatMapRun(Function1<Object,MutableSourceProvider> func) { flatMap = func; }
-            @Override public DropStrategy drop(int num) { return DropStrategy.CANNOT_DROP; }
+            @Override public DropStrategy drop(int num) { return DropStrategy.CANNOT_HANDLE; }
 
 //            @Override
 //            public Option<U> next() {
@@ -316,30 +356,41 @@ public interface Transform4<A> { // extends Transformable<A> {
 
 //            @SuppressWarnings("unchecked")
             @Override RunList toRunList() {
+//                System.out.println("in toRunList() for drop");
                 RunList ret = prevOp.toRunList();
                 int i = ret.list.size() - 1;
+//                System.out.println("\tchecking previous items to see if they can handle a drop...");
+                DropStrategy earlierDs = null;
                 for (; i >= 0; i--) {
                     OpRun opRun = ret.list.get(i);
-                    DropStrategy earlierDs = opRun.drop(drop);
-                    if (earlierDs == DropStrategy.CANNOT_DROP) {
+                    earlierDs = opRun.drop(drop);
+                    if (earlierDs == DropStrategy.CANNOT_HANDLE) {
+//                        System.out.println("\tNone can handle a drop...");
                         break;
                     } else if (earlierDs == DropStrategy.HANDLE_INTERNALLY) {
+//                        System.out.println("\tHandled internally by " + opRun);
                         return ret;
                     }
                 }
-                if (i <= 0) {
+                if ( (earlierDs != DropStrategy.CANNOT_HANDLE) && (i <= 0) ) {
                     DropStrategy srcDs = ret.source.drop(drop);
                     if (srcDs == DropStrategy.HANDLE_INTERNALLY) {
+//                        System.out.println("\tHandled internally by source: " + ret.source);
                         return ret;
                     }
                 }
+//                System.out.println("\tSource could not handle drop.");
                 Mutable.IntRef leftToDrop = Mutable.IntRef.of(drop);
+//                System.out.println("\tMake a drop for " + drop + " items.");
                 ret.list.add(new OpRun.FilterRun((t) -> {
                     if (leftToDrop.value() > 0) {
+//                        System.out.println("in FilterRun.  Left to drop: " + leftToDrop.value());
                         leftToDrop.set(leftToDrop.value() - 1);
                         return Boolean.FALSE;
                     }
-                    return Boolean.TRUE; }));
+//                    System.out.println("in FilterRun with none left to drop");
+                    return Boolean.TRUE;
+                }));
                 return ret;
             }
         }
@@ -409,9 +460,27 @@ public interface Transform4<A> { // extends Transformable<A> {
         }
     }
 
-    class SourceProviderArrayDesc<T> extends OpDesc<T> {
-        private final T[] list;
-        SourceProviderArrayDesc(T[] l) {
+//    class SourceProviderArrayDesc<T> extends OpDesc<T> {
+//        private final T[] list;
+//        SourceProviderArrayDesc(T[] l) {
+//            super(null);
+//            list = l;
+//        }
+//
+//        @Override RunList toRunList() {
+////            ops.add(new MutableSource.MutableListSource<>(list, 0));
+//            RunList runList = new RunList();
+//            runList.list = new ArrayList<>();
+//            // I made a MutableArraySource, but it was no faster than the list source, so no sense
+//            // in duplicating the code.  Just use the list.
+//            runList.source = new MutableSource.MutableListSource<>(Arrays.asList(list), 0);
+//            return runList;
+//        }
+//    }
+//
+    class SourceProviderIterableDesc<T> extends OpDesc<T> {
+        private final Iterable<T> list;
+        SourceProviderIterableDesc(Iterable<T> l) {
             super(null);
             list = l;
         }
@@ -420,9 +489,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 //            ops.add(new MutableSource.MutableListSource<>(list, 0));
             RunList runList = new RunList();
             runList.list = new ArrayList<>();
-            // I made a MutableArraySource, but it was no faster than the list source, so no sense
-            // in duplicating the code.  Just use the list.
-            runList.source = new MutableSource.MutableListSource<>(Arrays.asList(list), 0);
+            runList.source = new MutableSource.MutableIterableSource<>(list);
             return runList;
         }
     }
@@ -430,7 +497,9 @@ public interface Transform4<A> { // extends Transformable<A> {
     /** Constructor.  Need to add an Iterable constructor and maybe some day even an array constructor. */
     static <T> Transform4<T> fromList(List<T> list) { return new SourceProviderListDesc<>(list); }
 
-    static <T> Transform4<T> fromArray(T[] list) { return new SourceProviderArrayDesc<>(list); }
+    static <T> Transform4<T> fromArray(T[] list) { return new SourceProviderListDesc<>(Arrays.asList(list)); }
+
+    static <T> Transform4<T> fromIterable(Iterable<T> list) { return new SourceProviderIterableDesc<>(list); }
 
     // ================================================================================================================
     // These will come from Transformable, but (will be) overridden to have a different return type.
