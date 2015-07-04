@@ -7,6 +7,7 @@ import org.organicdesign.fp.function.Function1;
 import org.organicdesign.fp.function.Function2;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 // We model this as a linked list so that each transition can have it's own output type, building a type-safe bridge
@@ -101,56 +102,57 @@ public interface Transform4<A> { // extends Transformable<A> {
             }
         } // end class MutableListSource
 
-        class MutableArraySource<T> extends OpRun implements MutableSource<T> {
-            final T[] items;
-            int idx;
-            int size;
-
-            MutableArraySource(T[] ls, int i) { items = ls; idx = i; size = items.length; }
-
-            /** {@inheritDoc} */
-            @Override public boolean hasNext() {
-                return idx < size;
-            }
-
-            /** {@inheritDoc} */
-            @Override public T next() {
-                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my tests.
-                T ret = items[idx];
-                idx = idx + 1;
-                return ret;
-            }
-
-            /** {@inheritDoc} */
-            @Override public DropStrategy drop(int d) {
-                if (d < 1) { return DropStrategy.HANDLE_INTERNALLY; }
-                int numItems = size - idx;
-                if (d > numItems) {
-                    idx = size; // used up.
-                }
-                idx = idx + d;
-                return DropStrategy.HANDLE_INTERNALLY;
-            }
-
-            /** {@inheritDoc} */
-            @Override public int take(int t) {
-                // Taking none is equivalent to an empty source.
-                if (t < 1) {
-                    idx = size;
-                    return 0;
-                }
-
-                int numItems = size - idx;
-                if (t > numItems) {
-                    // Taking more items doesn't affect us, it only affects the caller.  Just
-                    // adjust their total by the number that we can handle.
-                    return t - numItems;
-                } // Can take them all.
-
-                size = idx + t;
-                return 0;
-            }
-        } // end class MutableArraySource
+        // This was no faster.
+//        class MutableArraySource<T> extends OpRun implements MutableSource<T> {
+//            final T[] items;
+//            int idx;
+//            int size;
+//
+//            MutableArraySource(T[] ls, int i) { items = ls; idx = i; size = items.length; }
+//
+//            /** {@inheritDoc} */
+//            @Override public boolean hasNext() {
+//                return idx < size;
+//            }
+//
+//            /** {@inheritDoc} */
+//            @Override public T next() {
+//                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my tests.
+//                T ret = items[idx];
+//                idx = idx + 1;
+//                return ret;
+//            }
+//
+//            /** {@inheritDoc} */
+//            @Override public DropStrategy drop(int d) {
+//                if (d < 1) { return DropStrategy.HANDLE_INTERNALLY; }
+//                int numItems = size - idx;
+//                if (d > numItems) {
+//                    idx = size; // used up.
+//                }
+//                idx = idx + d;
+//                return DropStrategy.HANDLE_INTERNALLY;
+//            }
+//
+//            /** {@inheritDoc} */
+//            @Override public int take(int t) {
+//                // Taking none is equivalent to an empty source.
+//                if (t < 1) {
+//                    idx = size;
+//                    return 0;
+//                }
+//
+//                int numItems = size - idx;
+//                if (t > numItems) {
+//                    // Taking more items doesn't affect us, it only affects the caller.  Just
+//                    // adjust their total by the number that we can handle.
+//                    return t - numItems;
+//                } // Can take them all.
+//
+//                size = idx + t;
+//                return 0;
+//            }
+//        } // end class MutableArraySource
 
         // TODO: de-duplicate cut-and pasted code (if still fast) then make MutableIterableSource
     } // end interface MutableSource
@@ -418,7 +420,9 @@ public interface Transform4<A> { // extends Transformable<A> {
 //            ops.add(new MutableSource.MutableListSource<>(list, 0));
             RunList runList = new RunList();
             runList.list = new ArrayList<>();
-            runList.source = new MutableSource.MutableArraySource<>(list, 0);
+            // I made a MutableArraySource, but it was no faster than the list source, so no sense
+            // in duplicating the code.  Just use the list.
+            runList.source = new MutableSource.MutableListSource<>(Arrays.asList(list), 0);
             return runList;
         }
     }

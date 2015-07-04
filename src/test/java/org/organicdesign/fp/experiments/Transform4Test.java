@@ -36,7 +36,7 @@ public class Transform4Test extends TestCase {
                           return accum;
                       }));
 
-        assertEquals(Arrays.<Integer>asList(1, 10, 100, 2, 20, 200, 3, 30, 300),
+        assertEquals(Arrays.asList(1, 10, 100, 2, 20, 200, 3, 30, 300),
                      t.flatMap(i -> PersistentVector.of(i, i * 10, i * 100))
                       .foldLeft(new ArrayList<>(), (accum, i) -> {
                           accum.add(i);
@@ -49,6 +49,5 @@ public class Transform4Test extends TestCase {
                           accum.add(i);
                           return accum;
                       }));
-
     }
 }
