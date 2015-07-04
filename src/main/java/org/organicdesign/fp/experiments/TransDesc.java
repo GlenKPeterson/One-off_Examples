@@ -1,6 +1,5 @@
 package org.organicdesign.fp.experiments;
 
-import org.organicdesign.fp.Mutable;
 import org.organicdesign.fp.Transformable;
 import org.organicdesign.fp.collections.UnmodIterable;
 import org.organicdesign.fp.collections.UnmodSortedIterator;
@@ -204,12 +203,12 @@ public abstract class TransDesc<A> implements Transformable<A> {
     } // end interface MutableSource
 
     static abstract class OpRun {
-        // TODO: Try with a linked list of ops instead of array, that way we can remove ops from the list when they are used up.
-//        OpRun nextOp = null;
-//        Function1<Object,Boolean> terminate = null;
+        // Time using a linked list of ops instead of array, so that we can easily remove ops from
+        // the list when they are used up.
         Function1<Object,Boolean> filter = null;
         Function1 map = null;
         Function1<Object,MutableSourceProvider> flatMap = null;
+//        Function1<Object,Boolean> keepGoing = null;
 
         public abstract OpStrategy drop(int num);
 
@@ -297,16 +296,16 @@ public abstract class TransDesc<A> implements Transformable<A> {
                 }
             }
 //                System.out.println("\tSource could not handle drop.");
-            Mutable.IntRef leftToDrop = Mutable.IntRef.of(drop);
 //                System.out.println("\tMake a drop for " + drop + " items.");
-            ret.list.add(new OpRun.FilterRun((t) -> {
-                if (leftToDrop.value() > 0) {
-//                        System.out.println("in FilterRun.  Left to drop: " + leftToDrop.value());
-                    leftToDrop.set(leftToDrop.value() - 1);
-                    return Boolean.FALSE;
+            ret.list.add(new OpRun.FilterRun(new Function1<Object,Boolean>() {
+                private int leftToDrop = drop;
+                @Override public Boolean applyEx(Object o) {
+                    if (leftToDrop > 0) {
+                        leftToDrop = leftToDrop - 1;
+                        return Boolean.FALSE;
+                    }
+                    return Boolean.TRUE;
                 }
-//                    System.out.println("in FilterRun with none left to drop");
-                return Boolean.TRUE;
             }));
             return ret;
         }
