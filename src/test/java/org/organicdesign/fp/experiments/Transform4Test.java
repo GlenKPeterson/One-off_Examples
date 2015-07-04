@@ -14,8 +14,8 @@ import java.util.List;
 public class Transform4Test extends TestCase {
 
     @Test public void testBasics() throws Exception {
-        Transform4<Integer> listXform = Transform4.fromList(Arrays.asList(1, 2, 3));
-        Transform4<Integer> iterXform = Transform4.fromIterable(Arrays.asList(1, 2, 3));
+        TransDesc<Integer> listXform = TransDesc.fromList(Arrays.asList(1, 2, 3));
+        TransDesc<Integer> iterXform = TransDesc.fromIterable(Arrays.asList(1, 2, 3));
 
         assertEquals(Arrays.asList(1, 2, 3),
                      listXform.foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
@@ -82,8 +82,8 @@ public class Transform4Test extends TestCase {
     }
 
     @Test public void longerCombinations() throws Exception {
-        Transform4<Integer> listXform = Transform4.fromList(Arrays.asList(1,2,3,4,5,6,7,8,9));
-        Transform4<Integer> iterXform = Transform4.fromIterable(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9));
+        TransDesc<Integer> listXform = TransDesc.fromList(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9));
+        TransDesc<Integer> iterXform = TransDesc.fromIterable(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9));
 
         assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9),
                      listXform.foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {

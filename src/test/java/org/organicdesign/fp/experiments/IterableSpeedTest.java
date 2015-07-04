@@ -324,7 +324,7 @@ public class IterableSpeedTest {
     @Test public void speedTest() {
         // This is the real/better test.  Really should comment this whole thing out as it's just an experiment.
 //      int MAX = 30000000;
-        int MAX = 500000;
+        int MAX = 300000;
         long startTime;
 
         startTime = System.currentTimeMillis();
@@ -364,14 +364,14 @@ public class IterableSpeedTest {
             return s1.head().getOrElse(0L);
         });
 
-        benchmark("SeqFromArray2", () -> {
-            SortedSequenceFromArray2<Long> s1 = SortedSequenceFromArray2.of(ls);
-            while (s1.head().isSome()) {
-                if (s1.head().get() < -1) { break; }
-                s1 = s1.tail();
-            }
-            return s1.head().getOrElse(0L);
-        });
+//        benchmark("SeqFromArray2", () -> {
+//            SortedSequenceFromArray2<Long> s1 = SortedSequenceFromArray2.of(ls);
+//            while (s1.head().isSome()) {
+//                if (s1.head().get() < -1) { break; }
+//                s1 = s1.tail();
+//            }
+//            return s1.head().getOrElse(0L);
+//        });
 
         benchmark("ViewFromArray", () -> {
             View<Long> s1 = View.of(ls);
@@ -459,22 +459,22 @@ public class IterableSpeedTest {
             return l;
         });
 
-        benchmark("SeqFromArray1", () -> {
-            Sequence<Long> s1 = Sequence.of(ls);
-            while (s1.head().isSome()) {
-                if (s1.head().get() < -1) { break; }
-                s1 = s1.tail();
-            }
-            return s1.head().getOrElse(0L);
-        });
+//        benchmark("SeqFromArray1", () -> {
+//            Sequence<Long> s1 = Sequence.of(ls);
+//            while (s1.head().isSome()) {
+//                if (s1.head().get() < -1) { break; }
+//                s1 = s1.tail();
+//            }
+//            return s1.head().getOrElse(0L);
+//        });
 
         benchmark("Transform4List", () -> {
-            Transform4<Long> t = Transform4.fromList(lsList);
+            TransDesc<Long> t = TransDesc.fromList(lsList);
             return t.foldLeft(0L, (accum, i) -> i < -1 ? i : accum);
         });
 
         benchmark("Transform4Array", () -> {
-            Transform4<Long> t = Transform4.fromArray(ls);
+            TransDesc<Long> t = TransDesc.fromArray(ls);
             return t.foldLeft(0L, (accum, i) -> i < -1 ? i : accum);
         });
     }

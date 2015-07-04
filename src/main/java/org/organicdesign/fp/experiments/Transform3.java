@@ -16,7 +16,7 @@ public interface Transform3<A,B> { // extends Transformable<A> {
 
     // TODO: Need to ensure that take comes after drop!
 
-    // enum DropStrategy { FINITE_DROPPABLE, INFINITE_NOT_DROPPABLE }
+    // enum OpStrategy { FINITE_DROPPABLE, INFINITE_NOT_DROPPABLE }
 
     interface MutableSourceProvider<T> extends UnmodIterable<T> {
         @Override MutableSource<T> iterator();

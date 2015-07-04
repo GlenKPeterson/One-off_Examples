@@ -1,6 +1,7 @@
 package org.organicdesign.fp.experiments;
 
 import org.organicdesign.fp.Mutable;
+import org.organicdesign.fp.Transformable;
 import org.organicdesign.fp.collections.UnmodIterable;
 import org.organicdesign.fp.collections.UnmodSortedIterator;
 import org.organicdesign.fp.function.Function1;
@@ -12,11 +13,17 @@ import java.util.List;
 
 // We model this as a linked list so that each transition can have it's own output type, building a type-safe bridge
 // from first operation to the last.
-public interface Transform4<A> { // extends Transformable<A> {
+/**
+ A description of operations to be performed.  When foldLeft() is called, transformation definition
+ is "compiled" into a mutable transformation which is then carried out.  This allows certain
+ performance shortcuts (such as doing a drop with index addition instead of iteration) and also
+ hides the mutability inherent in a transformation.
+ */
+public abstract class TransDesc<A> implements Transformable<A> {
 
     // TODO: Need to ensure that take comes after drop!
 
-    enum DropStrategy { HANDLE_INTERNALLY, ASK_SUPPLIER, CANNOT_HANDLE; }
+    enum OpStrategy { HANDLE_INTERNALLY, ASK_SUPPLIER, CANNOT_HANDLE; }
 
     interface MutableSourceProvider<T> extends UnmodIterable<T> {
         @Override MutableSource<T> iterator();
@@ -30,7 +37,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 //        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
 //            @Override public boolean hasNext() { return false; }
 //            @Override public Object next() { throw new NoSuchElementException("No more elements"); }
-//            @Override public DropStrategy drop(int i) { return DropStrategy.HANDLE_INTERNALLY; }
+//            @Override public OpStrategy drop(int i) { return OpStrategy.HANDLE_INTERNALLY; }
 //            @Override public int take(int i) { return i; }
 //        };
 //        @SuppressWarnings("unchecked")
@@ -41,7 +48,7 @@ public interface Transform4<A> { // extends Transformable<A> {
          @param d the number of items to drop
          @return true if the source knows it can handle dropping all these items.
          */
-        DropStrategy drop(int d);
+        OpStrategy drop(int d);
 
 //        /**
 //         Takes as many items as the source can handle.
@@ -49,7 +56,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 //         @return the number of "takes" left over when this source is exhausted (flatMap needs to know this).
 //         0 if t &lt;= the number of items left in the source.  Otherwise returns t - numItemsActuallyTaken
 //         */
-//        DropStrategy take(int t);
+//        OpStrategy take(int t);
 
         class MutableListSource<T> extends OpRun implements MutableSource<T> {
             final List<T> items;
@@ -72,22 +79,22 @@ public interface Transform4<A> { // extends Transformable<A> {
             }
 
             /** {@inheritDoc} */
-            @Override public DropStrategy drop(int d) {
-                if (d < 1) { return DropStrategy.HANDLE_INTERNALLY; }
+            @Override public OpStrategy drop(int d) {
+                if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
                 int numItems = size - idx;
                 if (d > numItems) {
                     idx = size; // used up.
                 }
                 idx = idx + d;
-                return DropStrategy.HANDLE_INTERNALLY;
+                return OpStrategy.HANDLE_INTERNALLY;
             }
 
 //            /** {@inheritDoc} */
-//            @Override public DropStrategy take(int t) {
+//            @Override public OpStrategy take(int t) {
 //                // Taking none is equivalent to an empty source.
 //                if (t < 1) {
 //                    idx = size;
-//                    return DropStrategy.HANDLE_INTERNALLY;
+//                    return OpStrategy.HANDLE_INTERNALLY;
 //                }
 //
 //                // Taking more items than we have is not possible.  Just take all in that case.
@@ -95,7 +102,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 //                if (t < numItems) {
 //                    size = idx + t;
 //                }
-//                return DropStrategy.HANDLE_INTERNALLY;
+//                return OpStrategy.HANDLE_INTERNALLY;
 //            }
 
             @Override public String toString() {
@@ -129,15 +136,15 @@ public interface Transform4<A> { // extends Transformable<A> {
             }
 
             /** {@inheritDoc} */
-            @Override public DropStrategy drop(int d) {
-                if (d < 1) { return DropStrategy.HANDLE_INTERNALLY; }
+            @Override public OpStrategy drop(int d) {
+                if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
                 drop = drop + d;
-                return DropStrategy.HANDLE_INTERNALLY;
+                return OpStrategy.HANDLE_INTERNALLY;
             }
 
 //            /** {@inheritDoc} */
-//            @Override public DropStrategy take(int t) {
-//                return DropStrategy.CANNOT_HANDLE;
+//            @Override public OpStrategy take(int t) {
+//                return OpStrategy.CANNOT_HANDLE;
 //            }
         } // end class MutableIterableSource
 
@@ -163,14 +170,14 @@ public interface Transform4<A> { // extends Transformable<A> {
             }
 
             /** {@inheritDoc} */
-            @Override public DropStrategy drop(int d) {
-                if (d < 1) { return DropStrategy.HANDLE_INTERNALLY; }
+            @Override public OpStrategy drop(int d) {
+                if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
                 int numItems = size - idx;
                 if (d > numItems) {
                     idx = size; // used up.
                 }
                 idx = idx + d;
-                return DropStrategy.HANDLE_INTERNALLY;
+                return OpStrategy.HANDLE_INTERNALLY;
             }
 
 //            /** {@inheritDoc} */
@@ -196,7 +203,7 @@ public interface Transform4<A> { // extends Transformable<A> {
         // TODO: de-duplicate cut-and pasted code (if still fast) then make MutableIterableSource
     } // end interface MutableSource
 
-    abstract class OpRun {
+    static abstract class OpRun {
         // TODO: Try with a linked list of ops instead of array, that way we can remove ops from the list when they are used up.
 //        OpRun nextOp = null;
 //        Function1<Object,Boolean> terminate = null;
@@ -204,18 +211,18 @@ public interface Transform4<A> { // extends Transformable<A> {
         Function1 map = null;
         Function1<Object,MutableSourceProvider> flatMap = null;
 
-        public abstract DropStrategy drop(int num);
+        public abstract OpStrategy drop(int num);
 
 //        public abstract boolean doDrop(int num);
 
         private static class FilterRun extends OpRun {
             FilterRun(Function1<Object,Boolean> func) { filter = func; }
-            @Override public DropStrategy drop(int num) { return DropStrategy.CANNOT_HANDLE; }
+            @Override public OpStrategy drop(int num) { return OpStrategy.CANNOT_HANDLE; }
         }
 
         private static class MapRun extends OpRun {
             MapRun(Function1 func) { map = func; }
-            @Override public DropStrategy drop(int num) { return DropStrategy.ASK_SUPPLIER; }
+            @Override public OpStrategy drop(int num) { return OpStrategy.ASK_SUPPLIER; }
         }
 
         private static class FlatMapRun extends OpRun {
@@ -223,7 +230,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 //            int numToDrop = 0;
 
             FlatMapRun(Function1<Object,MutableSourceProvider> func) { flatMap = func; }
-            @Override public DropStrategy drop(int num) { return DropStrategy.CANNOT_HANDLE; }
+            @Override public OpStrategy drop(int num) { return OpStrategy.CANNOT_HANDLE; }
 
 //            @Override
 //            public Option<U> next() {
@@ -259,182 +266,91 @@ public interface Transform4<A> { // extends Transformable<A> {
         @Override public MutableSource iterator() { return source; }
     }
 
-    // Using an abstract class here to limit the visibility of the next() method and present a less mutable
-    // interface to the outside world.
 
-    /**
-     A description of an operation to be performed.
+    private static class DropDesc<T> extends TransDesc<T> {
+        private final int drop;
+        DropDesc(TransDesc<T> prev, int d) { super(prev); drop = d; }
 
-     @param <G> the input type for this OpDesc.
-     */
-//    static
-    abstract class OpDesc<G> implements Transform4<G> {
-        final OpDesc prevOp;
-//        final int drop;
-//        final int take;
-        OpDesc(OpDesc pre) { prevOp = pre; }
-
-        /** Gets the next item. */
-//        abstract Option<F> next();
-        abstract RunList toRunList();
-
-        // Do I want to go back to modeling this as a separate step, then compress the steps
-        // as much as possible to move the drop and take operations as early in the stream as possible.
-
-        @Override public OpDesc<G> drop(int i) {
-            return new DropDesc<>(this, i);
-        }
-
-//        public int dropAmt() { return drop; }
-
-//        public int takeAmt() { return take; }
-
-        @Override public OpDesc<G> filter(Function1<? super G,Boolean> f) {
-            return new FilterDesc<>(this, f);
-        }
-
-//        @SuppressWarnings("unchecked")
-        @Override public <H> OpDesc<H> flatMap(Function1<? super G,Iterable<H>> f) {
-            return new FlatMapDesc<>(this, f);
-        }
-
-//        @SuppressWarnings("unchecked")
-        @Override public <H> OpDesc<H> map(Function1<? super G, ? extends H> f) {
-            return new MapDesc<>(this, f);
-        }
-
-        /** Provides a way to collect the results of the transformation. */
-    //    @Override
-        @Override public <H> H foldLeft(H ident, Function2<H,? super G,H> reducer) {
-
-            // Construct an optimized array of OpRuns (mutable operations for this run)
-            RunList runList = toRunList();
-//            System.out.println("this: " + this + " runList: " + runList);
-
-            // Actually do the fold.
-            return _foldLeft(runList, runList.opArray(), 0, ident, reducer);
-        }
-
-        // We used a linked-list to build the type-safe operations so if that code compiles, the types should work out
-        // here too.  However, for performance, we don't want to be stuck creating and passing Options around,
-        // nor do we want a telescoping stack of hasNext() and next() calls.  So we're abandoning type safety
-        // and calling all the intermediate results Objects.
         @SuppressWarnings("unchecked")
-        private <H> H _foldLeft(Iterable source, OpRun[] ops, int opIdx, H ident, Function2 reducer) {
-            Object ret = ident;
-
-            // This is a label - the first one I have used in Java in years, or maybe ever.
-            // I'm assuming this is fast, but will have to test to confirm it.
-            sourceLoop:
-            for (Object o : source) {
-                for (int j = opIdx; j < ops.length; j++) {
-                    OpRun op = ops[j];
-                    if ( (op.filter != null) && !op.filter.apply(o) ) {
-                        // stop processing this source item and go to the next one.
-                        continue sourceLoop;
-                    }
-                    if (op.map != null) {
-                        o = op.map.apply(o);
-                    } else if (op.flatMap != null) {
-                        ret = _foldLeft(op.flatMap.apply(o), ops, j + 1, (G) ret, reducer);
-                        // stop processing this source item and go to the next one.
-                        continue sourceLoop;
-                    }
-//                    if ( (op.terminate != null) && op.terminate.apply(o) ) {
-//                        return (G) ret;
-//                    }
-                }
-                // Here, the item made it through all the operations.  Combine it with the result.
-                ret = reducer.apply(ret, o);
-            }
-            return (H) ret;
-        }
-
-        private static class DropDesc<T> extends OpDesc<T> {
-            private final int drop;
-            DropDesc(OpDesc<T> prev, int d) { super(prev); drop = d; }
-
-//            @SuppressWarnings("unchecked")
-            @Override RunList toRunList() {
+        @Override RunList toRunList() {
 //                System.out.println("in toRunList() for drop");
-                RunList ret = prevOp.toRunList();
-                int i = ret.list.size() - 1;
+            RunList ret = prevOp.toRunList();
+            int i = ret.list.size() - 1;
 //                System.out.println("\tchecking previous items to see if they can handle a drop...");
-                DropStrategy earlierDs = null;
-                for (; i >= 0; i--) {
-                    OpRun opRun = ret.list.get(i);
-                    earlierDs = opRun.drop(drop);
-                    if (earlierDs == DropStrategy.CANNOT_HANDLE) {
+            OpStrategy earlierDs = null;
+            for (; i >= 0; i--) {
+                OpRun opRun = ret.list.get(i);
+                earlierDs = opRun.drop(drop);
+                if (earlierDs == OpStrategy.CANNOT_HANDLE) {
 //                        System.out.println("\tNone can handle a drop...");
-                        break;
-                    } else if (earlierDs == DropStrategy.HANDLE_INTERNALLY) {
+                    break;
+                } else if (earlierDs == OpStrategy.HANDLE_INTERNALLY) {
 //                        System.out.println("\tHandled internally by " + opRun);
-                        return ret;
-                    }
+                    return ret;
                 }
-                if ( (earlierDs != DropStrategy.CANNOT_HANDLE) && (i <= 0) ) {
-                    DropStrategy srcDs = ret.source.drop(drop);
-                    if (srcDs == DropStrategy.HANDLE_INTERNALLY) {
+            }
+            if ( (earlierDs != OpStrategy.CANNOT_HANDLE) && (i <= 0) ) {
+                OpStrategy srcDs = ret.source.drop(drop);
+                if (srcDs == OpStrategy.HANDLE_INTERNALLY) {
 //                        System.out.println("\tHandled internally by source: " + ret.source);
-                        return ret;
-                    }
+                    return ret;
                 }
+            }
 //                System.out.println("\tSource could not handle drop.");
-                Mutable.IntRef leftToDrop = Mutable.IntRef.of(drop);
+            Mutable.IntRef leftToDrop = Mutable.IntRef.of(drop);
 //                System.out.println("\tMake a drop for " + drop + " items.");
-                ret.list.add(new OpRun.FilterRun((t) -> {
-                    if (leftToDrop.value() > 0) {
+            ret.list.add(new OpRun.FilterRun((t) -> {
+                if (leftToDrop.value() > 0) {
 //                        System.out.println("in FilterRun.  Left to drop: " + leftToDrop.value());
-                        leftToDrop.set(leftToDrop.value() - 1);
-                        return Boolean.FALSE;
-                    }
+                    leftToDrop.set(leftToDrop.value() - 1);
+                    return Boolean.FALSE;
+                }
 //                    System.out.println("in FilterRun with none left to drop");
-                    return Boolean.TRUE;
-                }));
-                return ret;
-            }
+                return Boolean.TRUE;
+            }));
+            return ret;
+        }
+    }
+
+    private static class FilterDesc<T> extends TransDesc<T> {
+        final Function1<? super T,Boolean> f;
+
+        FilterDesc(TransDesc<T> prev, Function1<? super T,Boolean> func) { super(prev); f = func; }
+
+        @SuppressWarnings("unchecked")
+        @Override RunList toRunList() {
+            RunList ret = prevOp.toRunList();
+            ret.list.add(new OpRun.FilterRun((Function1<Object,Boolean>) f));
+            return ret;
+        }
+    }
+
+    private static class MapDesc<T,U> extends TransDesc<U> {
+        final Function1<? super T,? extends U> f;
+
+        MapDesc(TransDesc<T> prev, Function1<? super T,? extends U> func) { super(prev); f = func; }
+
+        @SuppressWarnings("unchecked")
+        @Override RunList toRunList() {
+            RunList ret = prevOp.toRunList();
+            ret.list.add(new OpRun.MapRun(f));
+            return ret;
+        }
+    }
+
+    private static class FlatMapDesc<T,U> extends TransDesc<U> {
+        final Function1<? super T,Iterable<U>> f;
+        FlatMapDesc(TransDesc<T> prev, Function1<? super T,Iterable<U>> func) {
+            super(prev); f = func;
         }
 
-        private static class FilterDesc<T> extends OpDesc<T> {
-            final Function1<? super T,Boolean> f;
-
-            FilterDesc(OpDesc<T> prev, Function1<? super T,Boolean> func) { super(prev); f = func; }
-
-            @SuppressWarnings("unchecked")
-            @Override RunList toRunList() {
-                RunList ret = prevOp.toRunList();
-                ret.list.add(new OpRun.FilterRun((Function1<Object,Boolean>) f));
-                return ret;
-            }
+        @SuppressWarnings("unchecked")
+        @Override RunList toRunList() {
+            RunList ret = prevOp.toRunList();
+            ret.list.add(new OpRun.FlatMapRun((Function1) f));
+            return ret;
         }
-
-        private static class MapDesc<T,U> extends OpDesc<U> {
-            final Function1<? super T,? extends U> f;
-
-            MapDesc(OpDesc<T> prev, Function1<? super T,? extends U> func) { super(prev); f = func; }
-
-            @SuppressWarnings("unchecked")
-            @Override RunList toRunList() {
-                RunList ret = prevOp.toRunList();
-                ret.list.add(new OpRun.MapRun(f));
-                return ret;
-            }
-        }
-
-        private static class FlatMapDesc<T,U> extends OpDesc<U> {
-            final Function1<? super T,Iterable<U>> f;
-            FlatMapDesc(OpDesc<T> prev, Function1<? super T,Iterable<U>> func) {
-                super(prev); f = func;
-            }
-
-            @SuppressWarnings("unchecked")
-            @Override RunList toRunList() {
-                RunList ret = prevOp.toRunList();
-                ret.list.add(new OpRun.FlatMapRun((Function1) f));
-                return ret;
-            }
-        }
-    } // end abstract class OpDesc
+    }
 
     // This is just a sample usage to be sure it compiles.
 //    Integer total = from(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9))
@@ -444,7 +360,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 //            .flatMap(s -> Arrays.asList(s, s, s))
 //            .foldLeft(0, (count, s) -> count + 1);
 
-    class SourceProviderListDesc<T> extends OpDesc<T> {
+    static class SourceProviderListDesc<T> extends TransDesc<T> {
         private final List<T> list;
         SourceProviderListDesc(List<T> l) {
             super(null);
@@ -460,7 +376,7 @@ public interface Transform4<A> { // extends Transformable<A> {
         }
     }
 
-    class SourceProviderArrayDesc<T> extends OpDesc<T> {
+    static class SourceProviderArrayDesc<T> extends TransDesc<T> {
         private final T[] list;
         SourceProviderArrayDesc(T[] l) {
             super(null);
@@ -478,7 +394,7 @@ public interface Transform4<A> { // extends Transformable<A> {
         }
     }
 
-    class SourceProviderIterableDesc<T> extends OpDesc<T> {
+    static class SourceProviderIterableDesc<T> extends TransDesc<T> {
         private final Iterable<T> list;
         SourceProviderIterableDesc(Iterable<T> l) {
             super(null);
@@ -495,38 +411,120 @@ public interface Transform4<A> { // extends Transformable<A> {
     }
 
     /** Constructor.  Need to add an Iterable constructor and maybe some day even an array constructor. */
-    static <T> Transform4<T> fromList(List<T> list) { return new SourceProviderListDesc<>(list); }
+    static <T> TransDesc<T> fromList(List<T> list) { return new SourceProviderListDesc<>(list); }
 
-    static <T> Transform4<T> fromArray(T[] list) { return new SourceProviderArrayDesc<>(list); }
+    static <T> TransDesc<T> fromArray(T[] list) { return new SourceProviderArrayDesc<>(list); }
 
-    static <T> Transform4<T> fromIterable(Iterable<T> list) { return new SourceProviderIterableDesc<>(list); }
+    static <T> TransDesc<T> fromIterable(Iterable<T> list) { return new SourceProviderIterableDesc<>(list); }
 
     // ================================================================================================================
     // These will come from Transformable, but (will be) overridden to have a different return type.
 
     /** The number of items to drop from the beginning of the output.  The drop happens before take(). */
-    Transform4<A> drop(int n);
-//    @Override
-    default Transform4<A> drop(long n) { return drop((int) n); }
+//    TransDesc<A> drop(int n);
+    @Override public TransDesc<A> drop(long n) { return drop((int) n); }
 
 //    @Override
-    Transform4<A> filter(Function1<? super A,Boolean> f);
+//    TransDesc<A> filter(Function1<? super A,Boolean> f);
 
-//    @Override
-    default Transform4<A> forEach(Function1<? super A, ?> f) {
+    @Override
+    public TransDesc<A> forEach(Function1<? super A, ?> f) {
         return filter(a -> {
             f.apply(a);
             return Boolean.TRUE;
         });
     }
 
-    <B> Transform4<B> flatMap(Function1<? super A,Iterable<B>> f);
+    final TransDesc prevOp;
+    TransDesc(TransDesc pre) { prevOp = pre; }
 
-//    @Override
-    <B> Transform4<B> map(Function1<? super A, ? extends B> f);
+    abstract RunList toRunList();
+
+// Do I want to go back to modeling this as a separate step, then compress the steps
+// as much as possible to move the drop and take operations as early in the stream as possible.
+
+    public TransDesc<A> drop(int i) { return new DropDesc<>(this, i); }
+
+//        public int dropAmt() { return drop; }
+
+//        public int takeAmt() { return take; }
+
+    @Override public TransDesc<A> filter(Function1<? super A,Boolean> f) {
+        return new FilterDesc<>(this, f);
+    }
+
+    public <B> TransDesc<B> flatMap(Function1<? super A,Iterable<B>> f) {
+        return new FlatMapDesc<>(this, f);
+    }
+
+    @Override public <B> TransDesc<B> map(Function1<? super A, ? extends B> f) {
+        return new MapDesc<>(this, f);
+    }
 
     /** Provides a way to collect the results of the transformation. */
 //    @Override
-    <B> B foldLeft(B ident, Function2<B,? super A,B> f);
+    @Override public <B> B foldLeft(B ident, Function2<B,? super A,B> reducer) {
+
+        // Construct an optimized array of OpRuns (mutable operations for this run)
+        RunList runList = toRunList();
+//            System.out.println("this: " + this + " runList: " + runList);
+
+        // Actually do the fold.
+        return _foldLeft(runList, runList.opArray(), 0, ident, reducer);
+    }
+
+    // We used a linked-list to build the type-safe operations so if that code compiles, the types should work out
+// here too.  However, for performance, we don't want to be stuck creating and passing Options around,
+// nor do we want a telescoping stack of hasNext() and next() calls.  So we're abandoning type safety
+// and calling all the intermediate results Objects.
+    @SuppressWarnings("unchecked")
+    private <H> H _foldLeft(Iterable source, OpRun[] ops, int opIdx, H ident, Function2 reducer) {
+        Object ret = ident;
+
+        // This is a label - the first one I have used in Java in years, or maybe ever.
+        // I'm assuming this is fast, but will have to test to confirm it.
+        sourceLoop:
+        for (Object o : source) {
+            for (int j = opIdx; j < ops.length; j++) {
+                OpRun op = ops[j];
+                if ( (op.filter != null) && !op.filter.apply(o) ) {
+                    // stop processing this source item and go to the next one.
+                    continue sourceLoop;
+                }
+                if (op.map != null) {
+                    o = op.map.apply(o);
+                } else if (op.flatMap != null) {
+                    ret = _foldLeft(op.flatMap.apply(o), ops, j + 1, (H) ret, reducer);
+                    // stop processing this source item and go to the next one.
+                    continue sourceLoop;
+                }
+//                    if ( (op.terminate != null) && op.terminate.apply(o) ) {
+//                        return (G) ret;
+//                    }
+            }
+            // Here, the item made it through all the operations.  Combine it with the result.
+            ret = reducer.apply(ret, o);
+        }
+        return (H) ret;
+    } // end _foldLeft();
+
+
+    @Override
+    public TransDesc<A> take(long l) {
+        // TODO: Implement
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public TransDesc<A> takeWhile(Function1<? super A,Boolean> function1) {
+        // TODO: Implement
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public <B> B foldLeft(B ident, Function2<B,? super A,B> function2, Function1<? super B,Boolean> function1) {
+        // TODO: Implement
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
 
 }
