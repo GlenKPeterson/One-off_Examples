@@ -24,6 +24,10 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
     enum OpStrategy { HANDLE_INTERNALLY, ASK_SUPPLIER, CANNOT_HANDLE; }
 
+    private static final Object TERMINATE = new Object();
+    @SuppressWarnings("unchecked")
+    private A terminate() { return (A) TERMINATE; }
+
     interface MutableSourceProvider<T> extends UnmodIterable<T> {
         @Override MutableSource<T> iterator();
     }
@@ -212,8 +216,6 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
         public abstract OpStrategy drop(int num);
 
-//        public abstract boolean doDrop(int num);
-
         private static class FilterRun extends OpRun {
             FilterRun(Function1<Object,Boolean> func) { filter = func; }
             @Override public OpStrategy drop(int num) { return OpStrategy.CANNOT_HANDLE; }
@@ -231,27 +233,6 @@ public abstract class TransDesc<A> implements Transformable<A> {
             FlatMapRun(Function1<Object,MutableSourceProvider> func) { flatMap = func; }
             @Override public OpStrategy drop(int num) { return OpStrategy.CANNOT_HANDLE; }
 
-//            @Override
-//            public Option<U> next() {
-//                while ((cache == null) || (cache.idx == cache.as.size())) {
-//                    Option<T> next = prevOp.next();
-//                    if (next.isSome()) {
-//                        cache = new ListSourceDesc<>(f.apply(next.get()));
-//                    } else {
-//                        return Option.none();
-//                    }
-//                    if (numToDrop > 0) {
-//                        if (numToDrop >= cache.as.size()) {
-//                            numToDrop -= cache.as.size();
-//                            cache = null;
-//                        } else {
-//                            cache.idx += numToDrop;
-//                            numToDrop = 0;
-//                        }
-//                    }
-//                }
-//                return cache.next();
-//            }
         }
 
     }
@@ -492,6 +473,12 @@ public abstract class TransDesc<A> implements Transformable<A> {
                 }
                 if (op.map != null) {
                     o = op.map.apply(o);
+                    // This is how map can handle takeWhile, take, and other termination marker
+                    // roles.  Remember, the fewer functions we have to check for, the faster this
+                    // will execute.
+                    if (o == TERMINATE) {
+                        return (H) ret;
+                    }
                 } else if (op.flatMap != null) {
                     ret = _foldLeft(op.flatMap.apply(o), ops, j + 1, (H) ret, reducer);
                     // stop processing this source item and go to the next one.
@@ -508,22 +495,40 @@ public abstract class TransDesc<A> implements Transformable<A> {
     } // end _foldLeft();
 
 
+    // TODO: Test.
     @Override
     public TransDesc<A> take(long l) {
-        // TODO: Implement
-        throw new UnsupportedOperationException("Not implemented yet");
+        // I'm coding this as a map operation that either returns the source, or a TERMINATE
+        // sentinel value.
+        return new MapDesc<>(this,
+                             new Function1<A,A>() {
+                                 private long numToTake = l;
+                                 @Override
+                                 public A applyEx(A a) throws Exception {
+                                     if (numToTake > 0) {
+                                         numToTake = numToTake - 1;
+                                         return a;
+                                     }
+                                     return terminate();
+                                 }
+                             });
     }
 
+    // TODO: Test.
     @Override
     public TransDesc<A> takeWhile(Function1<? super A,Boolean> function1) {
-        // TODO: Implement
-        throw new UnsupportedOperationException("Not implemented yet");
+        // I'm coding this as a map operation that either returns the source, or a TERMINATE
+        // sentinel value.
+        return new MapDesc<>(this, a -> function1.apply(a) ? a : terminate());
     }
 
+    // TODO: Test.
+    @SuppressWarnings("unchecked")
     @Override
     public <B> B foldLeft(B ident, Function2<B,? super A,B> function2, Function1<? super B,Boolean> function1) {
-        // TODO: Implement
-        throw new UnsupportedOperationException("Not implemented yet");
+        // I'm coding this as a map operation that either returns the source, or a TERMINATE
+        // sentinel value.
+        return takeWhile((Function1<? super A,Boolean>) function1).foldLeft(ident, function2);
     }
 
 }
