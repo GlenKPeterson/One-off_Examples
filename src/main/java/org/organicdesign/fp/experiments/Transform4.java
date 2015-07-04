@@ -7,7 +7,6 @@ import org.organicdesign.fp.function.Function1;
 import org.organicdesign.fp.function.Function2;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -143,37 +142,37 @@ public interface Transform4<A> { // extends Transformable<A> {
         } // end class MutableIterableSource
 
         // This was no faster.
-//        class MutableArraySource<T> extends OpRun implements MutableSource<T> {
-//            final T[] items;
-//            int idx;
-//            int size;
-//
-//            MutableArraySource(T[] ls, int i) { items = ls; idx = i; size = items.length; }
-//
-//            /** {@inheritDoc} */
-//            @Override public boolean hasNext() {
-//                return idx < size;
-//            }
-//
-//            /** {@inheritDoc} */
-//            @Override public T next() {
-//                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my tests.
-//                T ret = items[idx];
-//                idx = idx + 1;
-//                return ret;
-//            }
-//
-//            /** {@inheritDoc} */
-//            @Override public DropStrategy drop(int d) {
-//                if (d < 1) { return DropStrategy.HANDLE_INTERNALLY; }
-//                int numItems = size - idx;
-//                if (d > numItems) {
-//                    idx = size; // used up.
-//                }
-//                idx = idx + d;
-//                return DropStrategy.HANDLE_INTERNALLY;
-//            }
-//
+        class MutableArraySource<T> extends OpRun implements MutableSource<T> {
+            final T[] items;
+            int idx;
+            int size;
+
+            MutableArraySource(T[] ls, int i) { items = ls; idx = i; size = items.length; }
+
+            /** {@inheritDoc} */
+            @Override public boolean hasNext() {
+                return idx < size;
+            }
+
+            /** {@inheritDoc} */
+            @Override public T next() {
+                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my tests.
+                T ret = items[idx];
+                idx = idx + 1;
+                return ret;
+            }
+
+            /** {@inheritDoc} */
+            @Override public DropStrategy drop(int d) {
+                if (d < 1) { return DropStrategy.HANDLE_INTERNALLY; }
+                int numItems = size - idx;
+                if (d > numItems) {
+                    idx = size; // used up.
+                }
+                idx = idx + d;
+                return DropStrategy.HANDLE_INTERNALLY;
+            }
+
 //            /** {@inheritDoc} */
 //            @Override public int take(int t) {
 //                // Taking none is equivalent to an empty source.
@@ -192,7 +191,7 @@ public interface Transform4<A> { // extends Transformable<A> {
 //                size = idx + t;
 //                return 0;
 //            }
-//        } // end class MutableArraySource
+        } // end class MutableArraySource
 
         // TODO: de-duplicate cut-and pasted code (if still fast) then make MutableIterableSource
     } // end interface MutableSource
@@ -461,24 +460,24 @@ public interface Transform4<A> { // extends Transformable<A> {
         }
     }
 
-//    class SourceProviderArrayDesc<T> extends OpDesc<T> {
-//        private final T[] list;
-//        SourceProviderArrayDesc(T[] l) {
-//            super(null);
-//            list = l;
-//        }
-//
-//        @Override RunList toRunList() {
-////            ops.add(new MutableSource.MutableListSource<>(list, 0));
-//            RunList runList = new RunList();
-//            runList.list = new ArrayList<>();
-//            // I made a MutableArraySource, but it was no faster than the list source, so no sense
-//            // in duplicating the code.  Just use the list.
-//            runList.source = new MutableSource.MutableListSource<>(Arrays.asList(list), 0);
-//            return runList;
-//        }
-//    }
-//
+    class SourceProviderArrayDesc<T> extends OpDesc<T> {
+        private final T[] list;
+        SourceProviderArrayDesc(T[] l) {
+            super(null);
+            list = l;
+        }
+
+        @Override RunList toRunList() {
+//            ops.add(new MutableSource.MutableListSource<>(list, 0));
+            RunList runList = new RunList();
+            runList.list = new ArrayList<>();
+            // I made a MutableArraySource, but it was no faster than the list source, so no sense
+            // in duplicating the code.  Just use the list.
+            runList.source = new MutableSource.MutableArraySource<>(list, 0);
+            return runList;
+        }
+    }
+
     class SourceProviderIterableDesc<T> extends OpDesc<T> {
         private final Iterable<T> list;
         SourceProviderIterableDesc(Iterable<T> l) {
@@ -498,7 +497,7 @@ public interface Transform4<A> { // extends Transformable<A> {
     /** Constructor.  Need to add an Iterable constructor and maybe some day even an array constructor. */
     static <T> Transform4<T> fromList(List<T> list) { return new SourceProviderListDesc<>(list); }
 
-    static <T> Transform4<T> fromArray(T[] list) { return new SourceProviderListDesc<>(Arrays.asList(list)); }
+    static <T> Transform4<T> fromArray(T[] list) { return new SourceProviderArrayDesc<>(list); }
 
     static <T> Transform4<T> fromIterable(Iterable<T> list) { return new SourceProviderIterableDesc<>(list); }
 
@@ -507,9 +506,19 @@ public interface Transform4<A> { // extends Transformable<A> {
 
     /** The number of items to drop from the beginning of the output.  The drop happens before take(). */
     Transform4<A> drop(int n);
+//    @Override
+    default Transform4<A> drop(long n) { return drop((int) n); }
 
 //    @Override
     Transform4<A> filter(Function1<? super A,Boolean> f);
+
+//    @Override
+    default Transform4<A> forEach(Function1<? super A, ?> f) {
+        return filter(a -> {
+            f.apply(a);
+            return Boolean.TRUE;
+        });
+    }
 
     <B> Transform4<B> flatMap(Function1<? super A,Iterable<B>> f);
 
