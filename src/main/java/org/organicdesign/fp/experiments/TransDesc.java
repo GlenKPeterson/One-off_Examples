@@ -206,6 +206,10 @@ public abstract class TransDesc<A> implements Transformable<A> {
         // TODO: de-duplicate cut-and pasted code (if still fast) then make MutableIterableSource
     } // end interface MutableSource
 
+    /**
+     OpRuns are mutable operations that the transform carries out when it is run.  The compiled
+     "op codes" (which is also short for operation) of the transform.
+     */
     static abstract class OpRun {
         // Time using a linked list of ops instead of array, so that we can easily remove ops from
         // the list when they are used up.
@@ -215,6 +219,27 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //        Function1<Object,Boolean> keepGoing = null;
 
         public abstract OpStrategy drop(int num);
+
+        // We need to model this as a separate op for when the previous op is CANNOT_HANDLE.
+        // It's coded as a filter, but still needs to be modeled separately so that subsequent
+        // drops can be combined into the earliest single explicit drop op.
+        private static class DropRun extends OpRun {
+            private int leftToDrop;
+            DropRun(int drop) {
+                leftToDrop = drop;
+                filter = o -> {
+                    if (leftToDrop > 0) {
+                        leftToDrop = leftToDrop - 1;
+                        return Boolean.FALSE;
+                    }
+                    return Boolean.TRUE;
+                };
+            }
+            @Override public OpStrategy drop(int num) {
+                leftToDrop = leftToDrop + num;
+                return OpStrategy.HANDLE_INTERNALLY;
+            }
+        }
 
         private static class FilterRun extends OpRun {
             FilterRun(Function1<Object,Boolean> func) { filter = func; }
@@ -226,6 +251,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
             @Override public OpStrategy drop(int num) { return OpStrategy.ASK_SUPPLIER; }
         }
 
+        // TODO: FlatMap should be able to drop internally and probably take internally too.
         private static class FlatMapRun extends OpRun {
 //            ListSourceDesc<U> cache = null;
 //            int numToDrop = 0;
@@ -237,7 +263,15 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
     }
 
-    class RunList implements MutableSourceProvider {
+    /**
+     A RunList is like the compiled program from a Transform Description.  It contains a source
+     and a list of OpRun op-codes.  Each of these is its own source provider, since the output
+     of one transform can be the input to another.  FlatMap is implemented that way.  Notice that
+     there are no types here: Since the input could be one type, and each map or flatmap operation
+     could change that to another type, we ignore all that in the "compiled" version and just use
+     Objects.  That lets us use the simplest iteration primitives (for speed).
+     */
+    private static class RunList implements MutableSourceProvider {
         MutableSource source;
         List<OpRun> list;
         OpRun[] opArray() {
@@ -246,7 +280,13 @@ public abstract class TransDesc<A> implements Transformable<A> {
         @Override public MutableSource iterator() { return source; }
     }
 
-
+    /**
+     Describes a "drop" operation.  Drops will be pushed as early in the operation-list as possible,
+     ideally being done using one-time pointer addition on the source.  When that is not possible,
+     a Drop op-code is created (eventually implemented as a filter function).  Subsequent drop ops
+     will be combined into the earliest drop (for speed).
+     @param <T> the expected input type to drop.
+     */
     private static class DropDesc<T> extends TransDesc<T> {
         private final int drop;
         DropDesc(TransDesc<T> prev, int d) { super(prev); drop = d; }
@@ -278,16 +318,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
             }
 //                System.out.println("\tSource could not handle drop.");
 //                System.out.println("\tMake a drop for " + drop + " items.");
-            ret.list.add(new OpRun.FilterRun(new Function1<Object,Boolean>() {
-                private int leftToDrop = drop;
-                @Override public Boolean applyEx(Object o) {
-                    if (leftToDrop > 0) {
-                        leftToDrop = leftToDrop - 1;
-                        return Boolean.FALSE;
-                    }
-                    return Boolean.TRUE;
-                }
-            }));
+            ret.list.add(new OpRun.DropRun(drop));
             return ret;
         }
     }
