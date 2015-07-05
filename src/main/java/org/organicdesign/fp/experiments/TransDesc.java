@@ -226,7 +226,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
         /**
          We need to model this as a separate op for when the previous op is CANNOT_HANDLE.  It is
          coded as a filter, but still needs to be modeled separately so that subsequent drops can be
-         combined into the earliest single explicit drop op.
+         combined into the earliest single explicit drop op.  Such combinations are additive,
+         meaning that drop(3).drop(5) is equivalent to drop(8).
          */
         private static class DropRun extends OpRun {
             private long leftToDrop;
@@ -267,7 +268,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
         /**
          We need to model this as a separate op for when the previous op is CANNOT_HANDLE.  It is
          coded as a map, but still needs to be modeled separately so that subsequent takes can be
-         combined into the earliest single explicit take op.
+         combined into the earliest single explicit take op.  Such combination is a pick-least of
+         all the takes, meaning that take(5).take(3) is equivalent to take(3).
          */
         private static class TakeRun extends OpRun {
             private long numToTake;
@@ -283,7 +285,12 @@ public abstract class TransDesc<A> implements Transformable<A> {
             }
 
             @Override public OpStrategy take(long num) {
-                numToTake += num;
+                if (num < 0) {
+                    throw new IllegalArgumentException("Can't take less than 0 items.");
+                }
+                if (num < numToTake) {
+                    numToTake = num;
+                }
                 return OpStrategy.HANDLE_INTERNALLY;
             }
         }
