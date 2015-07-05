@@ -9,6 +9,7 @@ import org.organicdesign.fp.function.Function2;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 // We model this as a linked list so that each transition can have it's own output type, building a type-safe bridge
 // from first operation to the last.
@@ -40,8 +41,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
 //            @Override public boolean hasNext() { return false; }
 //            @Override public Object next() { throw new NoSuchElementException("No more elements"); }
-//            @Override public OpStrategy drop(int i) { return OpStrategy.HANDLE_INTERNALLY; }
-//            @Override public int take(int i) { return i; }
+//            @Override public OpStrategy drop(long i) { return OpStrategy.HANDLE_INTERNALLY; }
+//            @Override public int take(long i) { return i; }
 //        };
 //        @SuppressWarnings("unchecked")
 //        static <X> MutableListSource<X> empty() { return (MutableListSource<X>) EMPTY; }
@@ -49,22 +50,83 @@ public abstract class TransDesc<A> implements Transformable<A> {
         /**
          Drops as many items as the source can handle.
          @param d the number of items to drop
-         @return true if the source knows it can handle dropping all these items.
+         @return  whether the source can handle the take, or pass-through (ask-supplier), or can't
+         do either.
          */
-        OpStrategy drop(int d);
+        OpStrategy drop(long d);
 
-//        /**
-//         Takes as many items as the source can handle.
-//         @param t the number of items to take.
-//         @return the number of "takes" left over when this source is exhausted (flatMap needs to know this).
-//         0 if t &lt;= the number of items left in the source.  Otherwise returns t - numItemsActuallyTaken
-//         */
-//        OpStrategy take(int t);
+        /**
+         Takes as many items as the source can handle.
+         @param t the number of items to take.
+         @return whether the source can handle the take, or pass-through (ask-supplier), or can't
+         do either.
+         */
+        OpStrategy take(long t);
+
+        class MutableIterableSource<T> extends OpRun implements MutableSource<T> {
+            private static final long IGNORE_TAKE = -1;
+            final Iterator<T> items;
+            long drop = 0;
+            long numToTake = IGNORE_TAKE;
+
+            MutableIterableSource(Iterable<T> ls) { items = ls.iterator(); }
+
+            private void doDrop() {
+                while ((drop > 0) && items.hasNext()) {
+                    drop = drop - 1;
+                    items.next();
+                }
+            }
+
+            /** {@inheritDoc} */
+            @Override public boolean hasNext() {
+                if (numToTake == 0) { return false; }
+                if (drop > 0) { doDrop(); }
+                return items.hasNext();
+            }
+
+            /** {@inheritDoc} */
+            @Override public T next() {
+                if (drop > 0) { doDrop(); }
+                if (numToTake > IGNORE_TAKE) {
+                    if (numToTake == 0) {
+                        throw new NoSuchElementException("Called next() without calling hasNext." +
+                                                         " Completed specified take - no more" +
+                                                         " elements left.");
+                    }
+                    numToTake = numToTake - 1;
+                }
+                return items.next();
+            }
+
+            /** {@inheritDoc} */
+            @Override public OpStrategy drop(long d) {
+                if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
+                drop = drop + d;
+                return OpStrategy.HANDLE_INTERNALLY;
+            }
+
+            /** {@inheritDoc} */
+            @Override public OpStrategy take(long take) {
+                if (take < 0) {
+                    throw new IllegalArgumentException("Can't take less than zero items.");
+                }
+                if (numToTake == IGNORE_TAKE) {
+                    numToTake = take;
+                } else if (take < numToTake) {
+                    numToTake = take;
+                }
+                return OpStrategy.HANDLE_INTERNALLY;
+            }
+        } // end class MutableIterableSource
 
         class MutableListSource<T> extends OpRun implements MutableSource<T> {
             final List<T> items;
             int idx;
             int size;
+
+            /** Do not use.  This is only so that MutableArraySource can inherit from this class. */
+            MutableListSource() { items = null; };
 
             MutableListSource(List<T> ls, int i) { items = ls; idx = i; size = items.size(); }
 
@@ -82,133 +144,72 @@ public abstract class TransDesc<A> implements Transformable<A> {
             }
 
             /** {@inheritDoc} */
-            @Override public OpStrategy drop(int d) {
+            @Override public OpStrategy drop(long d) {
+                if (d > Integer.MAX_VALUE) {
+                    throw new IllegalArgumentException("Can't drop more than " + Integer.MAX_VALUE +
+                                                       " items");
+                } else if (d < 0) {
+                    throw new IllegalArgumentException("Makes no sense to drop less than 0 items");
+                }
+
                 if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
                 int numItems = size - idx;
                 if (d > numItems) {
                     idx = size; // used up.
                 }
-                idx = idx + d;
+                idx = idx + (int) d;
                 return OpStrategy.HANDLE_INTERNALLY;
             }
 
-//            /** {@inheritDoc} */
-//            @Override public OpStrategy take(int t) {
-//                // Taking none is equivalent to an empty source.
-//                if (t < 1) {
-//                    idx = size;
-//                    return OpStrategy.HANDLE_INTERNALLY;
-//                }
-//
-//                // Taking more items than we have is not possible.  Just take all in that case.
-//                int numItems = size - idx;
-//                if (t < numItems) {
-//                    size = idx + t;
-//                }
-//                return OpStrategy.HANDLE_INTERNALLY;
-//            }
+            /** {@inheritDoc} */
+            @Override public OpStrategy take(long take) {
+                if (take < 0) {
+                    throw new IllegalArgumentException("Makes no sense to take less than 0 items");
+                }
+                // Taking none is equivalent to an empty source.
+                if (take < 1) {
+                    idx = size;
+                    return OpStrategy.HANDLE_INTERNALLY;
+                }
+
+                // Taking more items than we have is not possible.  Just take all in that case.
+                int numItems = size - idx;
+                if (take < numItems) {
+                    size = idx + (int) take;
+                } else {
+                    idx = size; // used up
+                }
+                return OpStrategy.HANDLE_INTERNALLY;
+            }
 
             @Override public String toString() {
                 return "MutableListSource(idx:" + idx + ",size:" + size + ")";
             }
         } // end class MutableListSource
 
-        class MutableIterableSource<T> extends OpRun implements MutableSource<T> {
-            final Iterator<T> items;
-            int drop = 0;
-
-            MutableIterableSource(Iterable<T> ls) { items = ls.iterator(); }
-
-            private void doDrop() {
-                while ((drop > 0) && items.hasNext()) {
-                    drop = drop - 1;
-                    items.next();
-                }
-            }
-
-            /** {@inheritDoc} */
-            @Override public boolean hasNext() {
-                if (drop > 0) { doDrop(); }
-                return items.hasNext();
-            }
-
-            /** {@inheritDoc} */
-            @Override public T next() {
-                if (drop > 0) { doDrop(); }
-                return items.next();
-            }
-
-            /** {@inheritDoc} */
-            @Override public OpStrategy drop(int d) {
-                if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
-                drop = drop + d;
-                return OpStrategy.HANDLE_INTERNALLY;
-            }
-
-//            /** {@inheritDoc} */
-//            @Override public OpStrategy take(int t) {
-//                return OpStrategy.CANNOT_HANDLE;
-//            }
-        } // end class MutableIterableSource
-
         // This was no faster.
-        class MutableArraySource<T> extends OpRun implements MutableSource<T> {
-            final T[] items;
-            int idx;
-            int size;
+        class MutableArraySource<T> extends MutableListSource<T> {
+            final T[] itemArray;
 
-            MutableArraySource(T[] ls, int i) { items = ls; idx = i; size = items.length; }
-
-            /** {@inheritDoc} */
-            @Override public boolean hasNext() {
-                return idx < size;
+            MutableArraySource(T[] ls, int i) {
+                super();
+                itemArray = ls; idx = i; size = itemArray.length;
             }
 
             /** {@inheritDoc} */
             @Override public T next() {
                 // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my tests.
-                T ret = items[idx];
+                T ret = itemArray[idx];
                 idx = idx + 1;
                 return ret;
             }
-
-            /** {@inheritDoc} */
-            @Override public OpStrategy drop(int d) {
-                if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
-                int numItems = size - idx;
-                if (d > numItems) {
-                    idx = size; // used up.
-                }
-                idx = idx + d;
-                return OpStrategy.HANDLE_INTERNALLY;
-            }
-
-//            /** {@inheritDoc} */
-//            @Override public int take(int t) {
-//                // Taking none is equivalent to an empty source.
-//                if (t < 1) {
-//                    idx = size;
-//                    return 0;
-//                }
-//
-//                int numItems = size - idx;
-//                if (t > numItems) {
-//                    // Taking more items doesn't affect us, it only affects the caller.  Just
-//                    // adjust their total by the number that we can handle.
-//                    return t - numItems;
-//                } // Can take them all.
-//
-//                size = idx + t;
-//                return 0;
-//            }
         } // end class MutableArraySource
-
-        // TODO: de-duplicate cut-and pasted code (if still fast) then make MutableIterableSource
     } // end interface MutableSource
 
     /**
-     OpRuns are mutable operations that the transform carries out when it is run.  The compiled
-     "op codes" (which is also short for operation) of the transform.
+     OpRuns are mutable operations that the transform carries out when it is run.  This is in
+     contrast to the TransDesc which are like the "source code" or transformation description.
+     OpRuns are like compiled "op codes" of the transform.
      */
     static abstract class OpRun {
         // Time using a linked list of ops instead of array, so that we can easily remove ops from
@@ -218,14 +219,18 @@ public abstract class TransDesc<A> implements Transformable<A> {
         Function1<Object,MutableSourceProvider> flatMap = null;
 //        Function1<Object,Boolean> keepGoing = null;
 
-        public abstract OpStrategy drop(int num);
+        public OpStrategy drop(long num) { return OpStrategy.CANNOT_HANDLE; }
 
-        // We need to model this as a separate op for when the previous op is CANNOT_HANDLE.
-        // It's coded as a filter, but still needs to be modeled separately so that subsequent
-        // drops can be combined into the earliest single explicit drop op.
+        public OpStrategy take(long num) { return OpStrategy.CANNOT_HANDLE; }
+
+        /**
+         We need to model this as a separate op for when the previous op is CANNOT_HANDLE.  It is
+         coded as a filter, but still needs to be modeled separately so that subsequent drops can be
+         combined into the earliest single explicit drop op.
+         */
         private static class DropRun extends OpRun {
-            private int leftToDrop;
-            DropRun(int drop) {
+            private long leftToDrop;
+            DropRun(long drop) {
                 leftToDrop = drop;
                 filter = o -> {
                     if (leftToDrop > 0) {
@@ -235,7 +240,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
                     return Boolean.TRUE;
                 };
             }
-            @Override public OpStrategy drop(int num) {
+            @Override public OpStrategy drop(long num) {
                 leftToDrop = leftToDrop + num;
                 return OpStrategy.HANDLE_INTERNALLY;
             }
@@ -243,24 +248,45 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
         private static class FilterRun extends OpRun {
             FilterRun(Function1<Object,Boolean> func) { filter = func; }
-            @Override public OpStrategy drop(int num) { return OpStrategy.CANNOT_HANDLE; }
         }
 
         private static class MapRun extends OpRun {
             MapRun(Function1 func) { map = func; }
-            @Override public OpStrategy drop(int num) { return OpStrategy.ASK_SUPPLIER; }
+            @Override public OpStrategy drop(long num) { return OpStrategy.ASK_SUPPLIER; }
+            @Override public OpStrategy take(long num) { return OpStrategy.ASK_SUPPLIER; }
         }
 
-        // TODO: FlatMap should be able to drop internally and probably take internally too.
+        // TODO: FlatMap should drop and take internally using addition/subtraction on each output list instead of testing each list item individually.
         private static class FlatMapRun extends OpRun {
 //            ListSourceDesc<U> cache = null;
 //            int numToDrop = 0;
 
             FlatMapRun(Function1<Object,MutableSourceProvider> func) { flatMap = func; }
-            @Override public OpStrategy drop(int num) { return OpStrategy.CANNOT_HANDLE; }
-
         }
 
+        /**
+         We need to model this as a separate op for when the previous op is CANNOT_HANDLE.  It is
+         coded as a map, but still needs to be modeled separately so that subsequent takes can be
+         combined into the earliest single explicit take op.
+         */
+        private static class TakeRun extends OpRun {
+            private long numToTake;
+            TakeRun(long take) {
+                numToTake = take;
+                map = a -> {
+                    if (numToTake > 0) {
+                        numToTake = numToTake - 1;
+                        return a;
+                    }
+                    return TERMINATE;
+                };
+            }
+
+            @Override public OpStrategy take(long num) {
+                numToTake += num;
+                return OpStrategy.HANDLE_INTERNALLY;
+            }
+        }
     }
 
     /**
@@ -288,8 +314,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
      @param <T> the expected input type to drop.
      */
     private static class DropDesc<T> extends TransDesc<T> {
-        private final int drop;
-        DropDesc(TransDesc<T> prev, int d) { super(prev); drop = d; }
+        private final long drop;
+        DropDesc(TransDesc<T> prev, long d) { super(prev); drop = d; }
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
@@ -359,6 +385,49 @@ public abstract class TransDesc<A> implements Transformable<A> {
         @Override RunList toRunList() {
             RunList ret = prevOp.toRunList();
             ret.list.add(new OpRun.FlatMapRun((Function1) f));
+            return ret;
+        }
+    }
+
+    /**
+     Describes a "take" operation.  Takes will be pushed as early in the operation-list as possible,
+     ideally being done using one-time pointer addition on the source.  When that is not possible,
+     a Take op-code is created (eventually implemented as a filter function).  Subsequent take ops
+     will be combined into the earliest take (for speed).
+     @param <T> the expected input type to take.
+     */
+    private static class TakeDesc<T> extends TransDesc<T> {
+        private final long take;
+        TakeDesc(TransDesc<T> prev, long t) { super(prev); take = t; }
+
+        @SuppressWarnings("unchecked")
+        @Override RunList toRunList() {
+//                System.out.println("in toRunList() for take");
+            RunList ret = prevOp.toRunList();
+            int i = ret.list.size() - 1;
+//                System.out.println("\tchecking previous items to see if they can handle a take...");
+            OpStrategy earlierTs = null;
+            for (; i >= 0; i--) {
+                OpRun opRun = ret.list.get(i);
+                earlierTs = opRun.take(take);
+                if (earlierTs == OpStrategy.CANNOT_HANDLE) {
+//                        System.out.println("\tNone can handle a take...");
+                    break;
+                } else if (earlierTs == OpStrategy.HANDLE_INTERNALLY) {
+//                        System.out.println("\tHandled internally by " + opRun);
+                    return ret;
+                }
+            }
+            if ( (earlierTs != OpStrategy.CANNOT_HANDLE) && (i <= 0) ) {
+                OpStrategy srcDs = ret.source.take(take);
+                if (srcDs == OpStrategy.HANDLE_INTERNALLY) {
+//                        System.out.println("\tHandled internally by source: " + ret.source);
+                    return ret;
+                }
+            }
+//                System.out.println("\tSource could not handle take.");
+//                System.out.println("\tMake a take for " + take + " items.");
+            ret.list.add(new OpRun.TakeRun(take));
             return ret;
         }
     }
@@ -433,7 +502,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
     /** The number of items to drop from the beginning of the output.  The drop happens before take(). */
 //    TransDesc<A> drop(int n);
-    @Override public TransDesc<A> drop(long n) { return drop((int) n); }
+    @Override public TransDesc<A> drop(long n) { return new DropDesc<>(this, n); }
 
 //    @Override
 //    TransDesc<A> filter(Function1<? super A,Boolean> f);
@@ -450,15 +519,6 @@ public abstract class TransDesc<A> implements Transformable<A> {
     TransDesc(TransDesc pre) { prevOp = pre; }
 
     abstract RunList toRunList();
-
-// Do I want to go back to modeling this as a separate step, then compress the steps
-// as much as possible to move the drop and take operations as early in the stream as possible.
-
-    public TransDesc<A> drop(int i) { return new DropDesc<>(this, i); }
-
-//        public int dropAmt() { return drop; }
-
-//        public int takeAmt() { return take; }
 
     @Override public TransDesc<A> filter(Function1<? super A,Boolean> f) {
         return new FilterDesc<>(this, f);
@@ -525,25 +585,9 @@ public abstract class TransDesc<A> implements Transformable<A> {
         return (H) ret;
     } // end _foldLeft();
 
-
     // TODO: Test.
     @Override
-    public TransDesc<A> take(long l) {
-        // I'm coding this as a map operation that either returns the source, or a TERMINATE
-        // sentinel value.
-        return new MapDesc<>(this,
-                             new Function1<A,A>() {
-                                 private long numToTake = l;
-                                 @Override
-                                 public A applyEx(A a) throws Exception {
-                                     if (numToTake > 0) {
-                                         numToTake = numToTake - 1;
-                                         return a;
-                                     }
-                                     return terminate();
-                                 }
-                             });
-    }
+    public TransDesc<A> take(long l) { return new TakeDesc<>(this, l); }
 
     // TODO: Test.
     @Override
