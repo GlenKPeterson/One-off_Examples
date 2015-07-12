@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.organicdesign.fp.StaticImports.imSortedSet;
+
 @RunWith(JUnit4.class)
 public class TransDescTest extends TestCase {
 
@@ -47,8 +49,8 @@ public class TransDescTest extends TestCase {
 
     @Test public void testBasics() {
         Integer[] src = new Integer[] {1, 2, 3};
-        basics(TransDesc.fromList(Arrays.asList(src)));
-        basics(TransDesc.fromIterable(Arrays.asList(src)));
+        basics(TransDesc.from(Arrays.asList(src)));
+        basics(TransDesc.from(imSortedSet(src)));
         basics(TransDesc.fromArray(src));
     }
 
@@ -120,8 +122,8 @@ public class TransDescTest extends TestCase {
 
     @Test public void longerCombinations() {
         Integer[] src = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-        longerCombinations(TransDesc.fromList(Arrays.asList(src)));
-        longerCombinations(TransDesc.fromIterable(Arrays.asList(src)));
+        longerCombinations(TransDesc.from(Arrays.asList(src)));
+        longerCombinations(TransDesc.from(imSortedSet(src)));
         longerCombinations(TransDesc.fromArray(src));
     }
 

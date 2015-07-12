@@ -469,7 +469,7 @@ public class IterableSpeedTest {
 //        });
 
         benchmark("Transform4List", () -> {
-            TransDesc<Long> t = TransDesc.fromList(lsList);
+            TransDesc<Long> t = TransDesc.from(lsList);
             return t.foldLeft(0L, (accum, i) -> i < -1 ? i : accum);
         });
 

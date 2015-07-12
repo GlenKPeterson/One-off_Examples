@@ -11,8 +11,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-// We model this as a linked list so that each transition can have it's own output type, building a type-safe bridge
-// from first operation to the last.
+// We model this as a linked list so that each transition can have it's own output type, building a
+// type-safe bridge from first operation to the last.
 /**
  A description of operations to be performed.  When foldLeft() is called, transformation definition
  is "compiled" into a mutable transformation which is then carried out.  This allows certain
@@ -34,8 +34,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
     }
 
     /**
-     Like Iterator, this interface is inherently not thread-safe, so wrap it in something thread-safe before
-     sharing across threads.
+     Like Iterator, this interface is inherently not thread-safe, so wrap it in something
+     thread-safe before sharing across threads.
      */
     interface MutableSource<T> extends UnmodSortedIterator<T> {
 //        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
@@ -137,7 +137,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
             /** {@inheritDoc} */
             @Override public T next() {
-                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my tests.
+                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my
+                // tests.
                 T ret = items.get(idx);
                 idx = idx + 1;
                 return ret;
@@ -198,7 +199,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
             /** {@inheritDoc} */
             @Override public T next() {
-                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my tests.
+                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my
+                // tests.
                 T ret = itemArray[idx];
                 idx = idx + 1;
                 return ret;
@@ -257,7 +259,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
             @Override public OpStrategy take(long num) { return OpStrategy.ASK_SUPPLIER; }
         }
 
-        // TODO: FlatMap should drop and take internally using addition/subtraction on each output list instead of testing each list item individually.
+        // TODO: FlatMap should drop and take internally using addition/subtraction on each output
+        // TODO: list instead of testing each list item individually.
         private static class FlatMapRun extends OpRun {
 //            ListSourceDesc<U> cache = null;
 //            int numToDrop = 0;
@@ -329,7 +332,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //                System.out.println("in toRunList() for drop");
             RunList ret = prevOp.toRunList();
             int i = ret.list.size() - 1;
-//                System.out.println("\tchecking previous items to see if they can handle a drop...");
+//              System.out.println("\tchecking previous items to see if they can handle a drop...");
             OpStrategy earlierDs = null;
             for (; i >= 0; i--) {
                 OpRun opRun = ret.list.get(i);
@@ -412,7 +415,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //                System.out.println("in toRunList() for take");
             RunList ret = prevOp.toRunList();
             int i = ret.list.size() - 1;
-//                System.out.println("\tchecking previous items to see if they can handle a take...");
+//              System.out.println("\tchecking previous items to see if they can handle a take...");
             OpStrategy earlierTs = null;
             for (; i >= 0; i--) {
                 OpRun opRun = ret.list.get(i);
@@ -497,64 +500,37 @@ public abstract class TransDesc<A> implements Transformable<A> {
         }
     }
 
-    /** Constructor.  Need to add an Iterable constructor and maybe some day even an array constructor. */
-    static <T> TransDesc<T> fromList(List<T> list) { return new SourceProviderListDesc<>(list); }
-
-    static <T> TransDesc<T> fromArray(T[] list) { return new SourceProviderArrayDesc<>(list); }
-
-    static <T> TransDesc<T> fromIterable(Iterable<T> list) { return new SourceProviderIterableDesc<>(list); }
-
-    // ================================================================================================================
-    // These will come from Transformable, but (will be) overridden to have a different return type.
-
-    /** The number of items to drop from the beginning of the output.  The drop happens before take(). */
-//    TransDesc<A> drop(int n);
-    @Override public TransDesc<A> drop(long n) { return new DropDesc<>(this, n); }
-
-//    @Override
-//    TransDesc<A> filter(Function1<? super A,Boolean> f);
-
-    @Override
-    public TransDesc<A> forEach(Function1<? super A, ?> f) {
-        return filter(a -> {
-            f.apply(a);
-            return Boolean.TRUE;
-        });
+    /** Static factory methods */
+    public static <T> TransDesc<T> fromArray(T[] list) {
+        return new SourceProviderArrayDesc<>(list);
     }
 
+    /** Static factory methods */
+    public static <T> TransDesc<T> from(List<T> list) {
+        return new SourceProviderListDesc<>(list);
+    }
+
+    /** Static factory methods */
+    public static <T> TransDesc<T> from(Iterable<T> list) {
+        return new SourceProviderIterableDesc<>(list);
+    }
+
+    // ========================================= Instance =========================================
+
+    // Fields
     final TransDesc prevOp;
+
+    // Constructor
     TransDesc(TransDesc pre) { prevOp = pre; }
 
-    abstract RunList toRunList();
-
-    @Override public TransDesc<A> filter(Function1<? super A,Boolean> f) {
-        return new FilterDesc<>(this, f);
-    }
-
-    public <B> TransDesc<B> flatMap(Function1<? super A,Iterable<B>> f) {
-        return new FlatMapDesc<>(this, f);
-    }
-
-    @Override public <B> TransDesc<B> map(Function1<? super A, ? extends B> f) {
-        return new MapDesc<>(this, f);
-    }
-
-    /** Provides a way to collect the results of the transformation. */
-//    @Override
-    @Override public <B> B foldLeft(B ident, Function2<B,? super A,B> reducer) {
-
-        // Construct an optimized array of OpRuns (mutable operations for this run)
-        RunList runList = toRunList();
-//            System.out.println("this: " + this + " runList: " + runList);
-
-        // Actually do the fold.
-        return _foldLeft(runList, runList.opArray(), 0, ident, reducer);
-    }
-
-    // We used a linked-list to build the type-safe operations so if that code compiles, the types should work out
-// here too.  However, for performance, we don't want to be stuck creating and passing Options around,
-// nor do we want a telescoping stack of hasNext() and next() calls.  So we're abandoning type safety
-// and calling all the intermediate results Objects.
+    // This is the main method of this whole file.  Everything else lives to serve this.
+    // We used a linked-list to build the type-safe operations so if that code compiles, the types
+    // should work out here too.  However, for performance, we don't want to be stuck creating and
+    // passing Options around, nor do we want a telescoping stack of hasNext() and next() calls.
+    // So abandon type safety, store all the intermediate results as Objects, and use loops and
+    // sentinel values to break out or skip processing as appropriate.  Initial tests indicate this
+    // is 2.6 times faster than wrapping items type-safely in Options and 10 to 100 times faster
+    // than lazily evaluated and cached linked-list, Sequence model.
     @SuppressWarnings("unchecked")
     private <H> H _foldLeft(Iterable source, OpRun[] ops, int opIdx, H ident, Function2 reducer) {
         Object ret = ident;
@@ -592,6 +568,59 @@ public abstract class TransDesc<A> implements Transformable<A> {
         return (H) ret;
     } // end _foldLeft();
 
+    // =============================================================================================
+    // These will come from Transformable, but (will be) overridden to have a different return type.
+
+    // TODO: TransDesc<A> append(Iterable<? extends A> is) and append(List<? extends A> ls)
+
+    /** The number of items to drop from the beginning of the output. */
+    @Override public TransDesc<A> drop(long n) { return new DropDesc<>(this, n); }
+
+    // Do we need a dropWhile???
+
+    /** Provides a way to collect the results of the transformation. */
+    @Override public <B> B foldLeft(B ident, Function2<B,? super A,B> reducer) {
+
+        // Construct an optimized array of OpRuns (mutable operations for this run)
+        RunList runList = toRunList();
+//            System.out.println("this: " + this + " runList: " + runList);
+
+        // Actually do the fold.
+        return _foldLeft(runList, runList.opArray(), 0, ident, reducer);
+    }
+
+    // TODO: Test.
+    @SuppressWarnings("unchecked")
+    @Override
+    public <B> B foldLeft(B ident, Function2<B,? super A,B> function2,
+                          Function1<? super B,Boolean> function1) {
+        // I'm coding this as a map operation that either returns the source, or a TERMINATE
+        // sentinel value.
+        return takeWhile((Function1<? super A,Boolean>) function1).foldLeft(ident, function2);
+    }
+
+    @Override
+    public TransDesc<A> forEach(Function1<? super A, ?> f) {
+        return filter(a -> {
+            f.apply(a);
+            return Boolean.TRUE;
+        });
+    }
+
+    @Override public TransDesc<A> filter(Function1<? super A,Boolean> f) {
+        return new FilterDesc<>(this, f);
+    }
+
+    public <B> TransDesc<B> flatMap(Function1<? super A,Iterable<B>> f) {
+        return new FlatMapDesc<>(this, f);
+    }
+
+    @Override public <B> TransDesc<B> map(Function1<? super A, ? extends B> f) {
+        return new MapDesc<>(this, f);
+    }
+
+    abstract RunList toRunList();
+
     // TODO: Test.
     @Override
     public TransDesc<A> take(long l) { return new TakeDesc<>(this, l); }
@@ -603,14 +632,4 @@ public abstract class TransDesc<A> implements Transformable<A> {
         // sentinel value.
         return new MapDesc<>(this, a -> function1.apply(a) ? a : terminate());
     }
-
-    // TODO: Test.
-    @SuppressWarnings("unchecked")
-    @Override
-    public <B> B foldLeft(B ident, Function2<B,? super A,B> function2, Function1<? super B,Boolean> function1) {
-        // I'm coding this as a map operation that either returns the source, or a TERMINATE
-        // sentinel value.
-        return takeWhile((Function1<? super A,Boolean>) function1).foldLeft(ident, function2);
-    }
-
 }
