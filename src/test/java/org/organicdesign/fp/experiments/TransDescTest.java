@@ -8,6 +8,7 @@ import org.organicdesign.fp.collections.PersistentVector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.organicdesign.fp.StaticImports.imSortedSet;
@@ -45,6 +46,54 @@ public class TransDescTest extends TestCase {
                            accum.add(i);
                            return accum;
                        }));
+        assertEquals(Arrays.asList(1, 2, 3),
+                     td.drop(0)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Collections.emptyList(),
+                     td.drop(99)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Collections.emptyList(),
+                     td.drop(Integer.MAX_VALUE)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(1, 2),
+                     td.take(2)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Collections.emptyList(),
+                     td.take(0)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(1, 2, 3),
+                     td.take(3)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(1, 2, 3),
+                     td.take(99)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(1, 2, 3),
+                     td.take(Integer.MAX_VALUE)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
     }
 
     @Test public void testBasics() {
@@ -66,9 +115,23 @@ public class TransDescTest extends TestCase {
                            accum.add(i);
                            return accum;
                        }));
+        assertEquals(Arrays.asList(1, 2, 3, 4, 5),
+                     td.take(5)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                         accum.add(i);
+                         return accum;
+                     }));
         assertEquals(Arrays.asList(3, 5, 7, 9),
                      td.filter(i -> i % 2 == 0)
                        .map(i -> i + 1)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(3, 5, 7),
+                     td.filter(i -> i % 2 == 0)
+                       .map(i -> i + 1)
+                       .take(3)
                        .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                            accum.add(i);
                            return accum;
@@ -114,6 +177,16 @@ public class TransDescTest extends TestCase {
                        .map(i -> i + 1)
                        .flatMap(i -> PersistentVector.of(i, i * 10, i * 100))
                        .drop(5)
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(500, 7, 70, 700, 9, 90),
+                     td.filter(i -> i % 2 == 0)
+                       .map(i -> i + 1)
+                       .flatMap(i -> PersistentVector.of(i, i * 10, i * 100))
+                       .drop(5)
+                       .take(6)
                        .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                            accum.add(i);
                            return accum;

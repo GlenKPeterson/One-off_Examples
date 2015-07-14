@@ -157,8 +157,9 @@ public abstract class TransDesc<A> implements Transformable<A> {
                 int numItems = size - idx;
                 if (d > numItems) {
                     idx = size; // used up.
+                } else {
+                    idx = idx + (int) d;
                 }
-                idx = idx + (int) d;
                 return OpStrategy.HANDLE_INTERNALLY;
             }
 
@@ -177,9 +178,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
                 int numItems = size - idx;
                 if (take < numItems) {
                     size = idx + (int) take;
-                } else {
-                    idx = size; // used up
                 }
+                // If taking more than all the items, the take is meaningless.
                 return OpStrategy.HANDLE_INTERNALLY;
             }
 
