@@ -94,6 +94,24 @@ public class TransDescTest extends TestCase {
                            accum.add(i);
                            return accum;
                        }));
+        assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6),
+                     td.append(Arrays.asList(4, 5, 6))
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6),
+                     td.append(imSortedSet(4, 5, 6))
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6),
+                     td.appendArray(new Integer[] { 4, 5, 6 })
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
     }
 
     @Test public void testBasics() {

@@ -309,11 +309,57 @@ public abstract class TransDesc<A> implements Transformable<A> {
      */
     private static class RunList implements MutableSourceProvider {
         MutableSource source;
-        List<OpRun> list;
+        List<OpRun> list = new ArrayList<>();
+        RunList next = null;
+        RunList prev = null;
+
+        private RunList(RunList prv, MutableSource src) { prev = prv; source = src; }
+        public static RunList of(RunList prv, MutableSource src) {
+            RunList ret = new RunList(prv, src);
+            if (prv != null) { prv.next = ret; }
+            return ret;
+        }
+
         OpRun[] opArray() {
             return list.toArray(new OpRun[list.size()]);
         }
         @Override public MutableSource iterator() { return source; }
+    }
+
+    private static class AppendListDesc<T> extends TransDesc<T> {
+        final SourceProviderListDesc<T> src;
+
+        AppendListDesc(TransDesc<T> prev, SourceProviderListDesc<T> s) { super(prev); src = s; }
+
+        @SuppressWarnings("unchecked")
+        @Override RunList toRunList() {
+            RunList ret = prevOp.toRunList();
+            return RunList.of(ret, new MutableSource.MutableListSource<>(src.list, 0));
+        }
+    }
+
+    private static class AppendIterDesc<T> extends TransDesc<T> {
+        final SourceProviderIterableDesc<T> src;
+
+        AppendIterDesc(TransDesc<T> prev, SourceProviderIterableDesc<T> s) { super(prev); src = s; }
+
+        @SuppressWarnings("unchecked")
+        @Override RunList toRunList() {
+            RunList ret = prevOp.toRunList();
+            return RunList.of(ret, new MutableSource.MutableIterableSource<>(src.list));
+        }
+    }
+
+    private static class AppendArrayDesc<T> extends TransDesc<T> {
+        final SourceProviderArrayDesc<T> src;
+
+        AppendArrayDesc(TransDesc<T> prev, SourceProviderArrayDesc<T> s) { super(prev); src = s; }
+
+        @SuppressWarnings("unchecked")
+        @Override RunList toRunList() {
+            RunList ret = prevOp.toRunList();
+            return RunList.of(ret, new MutableSource.MutableArraySource<>(src.list, 0));
+        }
     }
 
     /**
@@ -451,52 +497,28 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //            .foldLeft(0, (count, s) -> count + 1);
 
     static class SourceProviderListDesc<T> extends TransDesc<T> {
-        private final List<T> list;
-        SourceProviderListDesc(List<T> l) {
-            super(null);
-            list = l;
-        }
-
+        private final List<? extends T> list;
+        SourceProviderListDesc(List<? extends T> l) { super(null); list = l; }
         @Override RunList toRunList() {
-//            ops.add(new MutableSource.MutableListSource<>(list, 0));
-            RunList runList = new RunList();
-            runList.list = new ArrayList<>();
-            runList.source = new MutableSource.MutableListSource<>(list, 0);
-            return runList;
+            return RunList.of(null, new MutableSource.MutableListSource<>(list, 0));
         }
     }
 
     static class SourceProviderArrayDesc<T> extends TransDesc<T> {
         private final T[] list;
-        SourceProviderArrayDesc(T[] l) {
-            super(null);
-            list = l;
-        }
-
+        SourceProviderArrayDesc(T[] l) { super(null); list = l; }
         @Override RunList toRunList() {
-//            ops.add(new MutableSource.MutableListSource<>(list, 0));
-            RunList runList = new RunList();
-            runList.list = new ArrayList<>();
-            // I made a MutableArraySource, but it was no faster than the list source, so no sense
-            // in duplicating the code.  Just use the list.
-            runList.source = new MutableSource.MutableArraySource<>(list, 0);
-            return runList;
+            // Why am I keeping this arround when it's no faster than using a List?  In theory, it
+            // could be faster, so I keep it around just in case.
+            return RunList.of(null, new MutableSource.MutableArraySource<>(list, 0));
         }
     }
 
     static class SourceProviderIterableDesc<T> extends TransDesc<T> {
-        private final Iterable<T> list;
-        SourceProviderIterableDesc(Iterable<T> l) {
-            super(null);
-            list = l;
-        }
-
+        private final Iterable<? extends T> list;
+        SourceProviderIterableDesc(Iterable<? extends T> l) { super(null); list = l; }
         @Override RunList toRunList() {
-//            ops.add(new MutableSource.MutableListSource<>(list, 0));
-            RunList runList = new RunList();
-            runList.list = new ArrayList<>();
-            runList.source = new MutableSource.MutableIterableSource<>(list);
-            return runList;
+            return RunList.of(null, new MutableSource.MutableIterableSource<>(list));
         }
     }
 
@@ -572,6 +594,17 @@ public abstract class TransDesc<A> implements Transformable<A> {
     // These will come from Transformable, but (will be) overridden to have a different return type.
 
     // TODO: TransDesc<A> append(Iterable<? extends A> is) and append(List<? extends A> ls)
+    public TransDesc<A> append(List<? extends A> list) {
+        return new AppendListDesc<>(this, new SourceProviderListDesc<>(list));
+    }
+
+    public TransDesc<A> append(Iterable<? extends A> list) {
+        return new AppendIterDesc<>(this, new SourceProviderIterableDesc<>(list));
+    }
+
+    public TransDesc<A> appendArray(A[] list) {
+        return new AppendArrayDesc<>(this, new SourceProviderArrayDesc<>(list));
+    }
 
     /** The number of items to drop from the beginning of the output. */
     @Override public TransDesc<A> drop(long n) { return new DropDesc<>(this, n); }
@@ -583,10 +616,18 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
         // Construct an optimized array of OpRuns (mutable operations for this run)
         RunList runList = toRunList();
+        // Go back to the first runlist:
+        while (runList.prev != null) { runList = runList.prev; }
 //            System.out.println("this: " + this + " runList: " + runList);
 
-        // Actually do the fold.
-        return _foldLeft(runList, runList.opArray(), 0, ident, reducer);
+        // Process the runlists in order.
+        B ret = ident;
+        while (runList != null) {
+            // Actually do the fold.
+            ret = _foldLeft(runList, runList.opArray(), 0, ret, reducer);
+            runList = runList.next;
+        }
+        return ret;
     }
 
     // TODO: Test.
