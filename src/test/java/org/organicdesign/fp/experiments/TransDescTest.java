@@ -209,6 +209,17 @@ public class TransDescTest extends TestCase {
                            accum.add(i);
                            return accum;
                        }));
+        assertEquals(Arrays.asList(500, 7, 70, 700, 9, 90, 91, 92, 93),
+                     td.filter(i -> i % 2 == 0)
+                       .map(i -> i + 1)
+                       .flatMap(i -> PersistentVector.of(i, i * 10, i * 100))
+                       .drop(5)
+                       .take(6)
+                       .append(Arrays.asList(91, 92, 93))
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
     }
 
     @Test public void longerCombinations() {
