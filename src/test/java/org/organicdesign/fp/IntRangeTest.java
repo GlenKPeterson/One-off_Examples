@@ -17,34 +17,38 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(JUnit4.class)
 public class IntRangeTest {
     @Test(expected = IllegalArgumentException.class)
     public void factory1() {
-        IntRange.of(null, Long.valueOf(1));
+        RangeOfLong.of(null, Long.valueOf(1));
     }
     @Test(expected = IllegalArgumentException.class)
     public void factory2() {
-        IntRange.of(Long.valueOf(1), null);
+        RangeOfLong.of(Long.valueOf(1), null);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void factory3() {
-        IntRange.of(1, 0);
+        RangeOfLong.of(1, 0);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void subRange() {
-        IntRange.of(1, 8).getSubRanges(0);
+        RangeOfLong.of(1, 8).getSubRanges(0);
     }
 
     @Test
     public void basics() {
-        IntRange ir1 = IntRange.of(0, 0);
+        RangeOfLong ir1 = RangeOfLong.of(0, 0);
         assertEquals(ir1.contains(0), true);
         assertEquals(ir1.contains(1), false);
         assertEquals(ir1.contains(-1), false);
@@ -53,52 +57,62 @@ public class IntRangeTest {
 
     @Test
     public void exactSubRanges() {
-        IntRange ir2 = IntRange.of(1, 8);
-        List<IntRange> l = ir2.getSubRanges(1);
+        RangeOfLong ir2 = RangeOfLong.of(1, 8);
+        List<RangeOfLong> l = ir2.getSubRanges(1);
         assertEquals(l.size(), 1);
         assertEquals(l.get(0), ir2);
 
-        l = IntRange.of(1, 1).getSubRanges(1);
+        l = RangeOfLong.of(1, 1).getSubRanges(1);
         assertEquals(l.size(), 1);
-        assertEquals(l.get(0), IntRange.of(1, 1));
+        assertEquals(l.get(0), RangeOfLong.of(1, 1));
 
-        l = IntRange.of(1, 2).getSubRanges(2);
+        l = RangeOfLong.of(1, 2).getSubRanges(2);
         assertEquals(l.size(), 2);
-        assertEquals(l.get(0), IntRange.of(1, 1));
-        assertEquals(l.get(1), IntRange.of(2, 2));
+        assertEquals(l.get(0), RangeOfLong.of(1, 1));
+        assertEquals(l.get(1), RangeOfLong.of(2, 2));
 
-        l = IntRange.of(1, 8).getSubRanges(2);
+        l = RangeOfLong.of(1, 8).getSubRanges(2);
         assertEquals(l.size(), 2);
-        assertEquals(l.get(0), IntRange.of(1, 4));
-        assertEquals(l.get(1), IntRange.of(5, 8));
+        assertEquals(l.get(0), RangeOfLong.of(1, 4));
+        assertEquals(l.get(1), RangeOfLong.of(5, 8));
 
-        l = IntRange.of(1, 3).getSubRanges(3);
+        l = RangeOfLong.of(1, 3).getSubRanges(3);
         assertEquals(l.size(), 3);
-        assertEquals(l.get(0), IntRange.of(1, 1));
-        assertEquals(l.get(1), IntRange.of(2, 2));
-        assertEquals(l.get(2), IntRange.of(3, 3));
+        assertEquals(l.get(0), RangeOfLong.of(1, 1));
+        assertEquals(l.get(1), RangeOfLong.of(2, 2));
+        assertEquals(l.get(2), RangeOfLong.of(3, 3));
 
-        l = IntRange.of(1, 9).getSubRanges(3);
+        l = RangeOfLong.of(1, 9).getSubRanges(3);
         assertEquals(l.size(), 3);
-        assertEquals(l.get(0), IntRange.of(1, 3));
-        assertEquals(l.get(1), IntRange.of(4, 6));
-        assertEquals(l.get(2), IntRange.of(7, 9));
+        assertEquals(l.get(0), RangeOfLong.of(1, 3));
+        assertEquals(l.get(1), RangeOfLong.of(4, 6));
+        assertEquals(l.get(2), RangeOfLong.of(7, 9));
 
-        l = IntRange.of(1, 99).getSubRanges(3);
+        l = RangeOfLong.of(1, 99).getSubRanges(3);
         assertEquals(l.size(), 3);
-        assertEquals(l.get(0), IntRange.of(1, 33));
-        assertEquals(l.get(1), IntRange.of(34, 66));
-        assertEquals(l.get(2), IntRange.of(67, 99));
+        assertEquals(l.get(0), RangeOfLong.of(1, 33));
+        assertEquals(l.get(1), RangeOfLong.of(34, 66));
+        assertEquals(l.get(2), RangeOfLong.of(67, 99));
     }
 
     @Test
     public void roundedSubRanges() {
-        List<IntRange> l = IntRange.of(1, 100).getSubRanges(3);
+        List<RangeOfLong> l = RangeOfLong.of(1, 100).getSubRanges(3);
         assertEquals(l.size(), 3);
-        assertEquals(l.get(0), IntRange.of(1, 34));
-        assertEquals(l.get(1), IntRange.of(35, 67));
-        assertEquals(l.get(2), IntRange.of(68, 100));
+        assertEquals(l.get(0), RangeOfLong.of(1, 34));
+        assertEquals(l.get(1), RangeOfLong.of(35, 67));
+        assertEquals(l.get(2), RangeOfLong.of(68, 100));
     }
 
+    @Test public void iteratorTest() {
+        Iterator<Long> a = Arrays.asList(-2L, -1L, 0L, 1L, 2L, 3L, 4L).iterator();
+        Iterator<Long> b = RangeOfLong.of(-2, 5).iterator();
 
+        while (a.hasNext()) {
+            assertTrue(b.hasNext());
+            assertEquals(a.next(), b.next());
+        }
+        assertFalse(b.hasNext());
+
+    }
 }

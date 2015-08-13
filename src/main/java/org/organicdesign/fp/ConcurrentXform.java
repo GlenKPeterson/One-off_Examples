@@ -21,26 +21,26 @@ import java.util.List;
 
 public class ConcurrentXform {
     private final int maxThreads;
-    private final IntRange range;
+    private final RangeOfLong range;
 
-    private ConcurrentXform(int t, IntRange r) { maxThreads = t; range = r; }
+    private ConcurrentXform(int t, RangeOfLong r) { maxThreads = t; range = r; }
 
-    public static ConcurrentXform of(int t, IntRange r) { return new ConcurrentXform(t, r); }
+    public static ConcurrentXform of(int t, RangeOfLong r) { return new ConcurrentXform(t, r); }
 
     public Long[] toTypedArray() {
         if (range.size() > (long) Integer.MAX_VALUE) {
             throw new IllegalStateException("size of range is too big for a Java array.");
         }
         Long[] ret = new Long[(int) range.size()];
-        List<IntRange> ranges = range.getSubRanges(maxThreads);
+        List<RangeOfLong> ranges = range.getSubRanges(maxThreads);
 
-        List<IntRange> idxRanges = IntRange.of(0, range.size() - 1).getSubRanges(maxThreads);
+        List<RangeOfLong> idxRanges = RangeOfLong.of(0, range.size() - 1).getSubRanges(maxThreads);
 
         List<Thread> threads = new ArrayList<>();
 
         for (int i = 0; i < ranges.size(); i++) {
-            IntRange r = ranges.get(i);
-            IntRange rIdx = idxRanges.get(i);
+            RangeOfLong r = ranges.get(i);
+            RangeOfLong rIdx = idxRanges.get(i);
             if (i == (ranges.size() - 1)) {
                 System.out.println("Running in current thread...");
                 final Mutable.IntRef idx = Mutable.IntRef.of((int) rIdx.start());
@@ -86,12 +86,12 @@ public class ConcurrentXform {
         }
         List<MutableLinkedList<Long>> results = new ArrayList<>();
 
-        List<IntRange> ranges = range.getSubRanges(maxThreads);
+        List<RangeOfLong> ranges = range.getSubRanges(maxThreads);
 
         List<Thread> threads = new ArrayList<>();
 
         for (int i = 0; i < ranges.size(); i++) {
-            IntRange r = ranges.get(i);
+            RangeOfLong r = ranges.get(i);
             MutableLinkedList<Long> ll = new MutableLinkedList<>();
             results.add(ll);
             if (i == (ranges.size() - 1)) {

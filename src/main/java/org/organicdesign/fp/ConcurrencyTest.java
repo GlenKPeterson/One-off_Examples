@@ -41,7 +41,7 @@ public class ConcurrencyTest {
         }
 
         println("");
-        IntRange range = IntRange.of( (0 - rMax), rMax);
+        RangeOfLong range = RangeOfLong.of((0 - rMax), rMax);
         ConcurrentXform cx = ConcurrentXform.of(numThreads, range);
         long startTime = System.currentTimeMillis();
         cx.toLinkedList();

@@ -25,7 +25,7 @@ public class ConcurrentXformTest {
     @Test
     public void arrayCorrectness() {
         Long[] is = new Long[] { 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L };
-        IntRange range = IntRange.of(1, 9);
+        RangeOfLong range = RangeOfLong.of(1, 9);
         assertArrayEquals(ConcurrentXform.of(1, range).toTypedArray(), is);
 
         assertArrayEquals(ConcurrentXform.of(2, range).toTypedArray(), is);
@@ -37,7 +37,7 @@ public class ConcurrentXformTest {
     @Test
     public void linkedListCorrectness() {
         Long[] is = new Long[] { 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L };
-        IntRange range = IntRange.of(1, 9);
+        RangeOfLong range = RangeOfLong.of(1, 9);
         assertArrayEquals(ConcurrentXform.of(1, range).toLinkedList().toTypedArray(), is);
 
         assertArrayEquals(ConcurrentXform.of(2, range).toLinkedList().toTypedArray(), is);
@@ -50,7 +50,7 @@ public class ConcurrentXformTest {
 //    @Ignore
 //    public void arraySpeed() {
 //        System.out.println();
-//        IntRange range = IntRange.of(-10000000, 10000000);
+//        RangeOfLong range = RangeOfLong.of(-10000000, 10000000);
 //        ConcurrentXform cx = ConcurrentXform.of(2, range);
 //        long startTime = System.currentTimeMillis();
 //        cx.toTypedArray();
@@ -79,7 +79,7 @@ public class ConcurrentXformTest {
 //        // on my system monitor for the entire duration of the test???  I've only got two
 //        // processors, so it would be interesting to run on bigger hardware.
 //        System.out.println();
-//        IntRange range = IntRange.of(-10000000, 10000000);
+//        RangeOfLong range = RangeOfLong.of(-10000000, 10000000);
 //        ConcurrentXform cx = ConcurrentXform.of(2, range);
 //        long startTime = System.currentTimeMillis();
 //        cx.toLinkedList();

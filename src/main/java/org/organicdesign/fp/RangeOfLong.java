@@ -21,34 +21,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- This is an idea, which is why I put it in the test folder.  It would be super nice if
- Integer implemented something beyond Comparable that would give a sense of what the *next* integer
- is.  In theory, this class could be used for anything that can provide it's next item.
+ A special case of an indexed sequence of (long) integers.  It currently assumes a step of 1.
+ Like everything in Java, the iterator it produces is inclusive of the the start endpoint but
+ exclusive of the end.
 
- Does NOT handle an infinite range (yet).
+ In theory, a class like this could be used for anything that can provide it's next item.  To do
+ that, Integer/Long would need to implement something that defined what the next() and previous()
+ values.
+
+ Currently limited to Long.MIN_VALUE to Long.MAX_VALUE.
  */
-public class IntRange implements UnmodSortedIterable<Long> {
+public class RangeOfLong implements UnmodSortedIterable<Long> {
     private final long start;
     private final long end;
     private final long size;
 
-    private IntRange(long s, long e) { start = s; end = e; size = (end - start) + 1; }
+    private RangeOfLong(long s, long e) { start = s; end = e; size = (end - start) + 1; }
 
-    public static IntRange of(long s, long e) {
+    public static RangeOfLong of(long s, long e) {
         if (e < s) {
             throw new IllegalArgumentException("end of range must be >= start of range");
         }
-        return new IntRange(s, e);
+        return new RangeOfLong(s, e);
     }
 
-    public static IntRange of(Number s, Number e) {
+    public static RangeOfLong of(Number s, Number e) {
         if ((s == null) || (e == null)) {
             throw new IllegalArgumentException("Nulls not allowed");
         }
-        return new IntRange(s.longValue(), e.longValue());
+        return new RangeOfLong(s.longValue(), e.longValue());
     }
 
-//    public static IntRange of(int s, int e) { return of((long) s, (long) e); }
+//    public static RangeOfLong of(int s, int e) { return of((long) s, (long) e); }
 
     public long start() { return start; }
     public long end() { return end; }
@@ -63,12 +67,12 @@ public class IntRange implements UnmodSortedIterable<Long> {
     }
 
     // You can ask for a given number of views, but what you get could be that number of fewer.
-    public List<IntRange> getSubRanges(int n) {
+    public List<RangeOfLong> getSubRanges(int n) {
         if (n < 1) {
             throw new IllegalArgumentException("Must specify a positive number of ranges");
         }
         long numParts = (long) n;
-        List<IntRange> ranges = new ArrayList<>();
+        List<RangeOfLong> ranges = new ArrayList<>();
         if (numParts == 1) {
             ranges.add(this);
         } else {
@@ -88,7 +92,7 @@ public class IntRange implements UnmodSortedIterable<Long> {
                 long endIdx = partitionEnd.ceiling() - 1;
 //                System.out.println("\t\tstartIdx: " + startIdx);
 //                System.out.println("\t\tendIdx: " + endIdx);
-                ranges.add(IntRange.of(get(startIdx), get(endIdx)));
+                ranges.add(RangeOfLong.of(get(startIdx), get(endIdx)));
                 startIdx = endIdx + 1;
 //                System.out.println("\t\tnext startIdx: " + startIdx);
                 partitionEnd = partitionEnd.plus(viewSize); // no rounding error
@@ -105,27 +109,29 @@ public class IntRange implements UnmodSortedIterable<Long> {
     public boolean equals(Object other) {
         // Cheapest operations first...
         if (this == other) { return true; }
-        if ( !(other instanceof IntRange) ) { return false; }
+        if ( !(other instanceof RangeOfLong) ) { return false; }
 
         // Details...
-        final IntRange that = (IntRange) other;
+        final RangeOfLong that = (RangeOfLong) other;
         // This is not a database object; compare "significant" fields here.
         return (this.start == that.start) &&
                (this.end == that.end);
     }
 
     /**
-     * {@inheritDoc}
+     {@inheritDoc}
+     Iterates from start of range (inclusive) up-to, but excluding, the end of the range.
+     I'm not sure this is a good idea, but Python, Clojure, Scala, and just about everything in
+     Java expects similar behavior.
      */
     @Override
     public UnmodSortedIterator<Long> iterator() {
-        // TODO: this is exclusive of both endpoints.  I would think inclusive would be better, or subclasses RangeIncExc, RangeExcInc, RangeIncInc, RangeExcExc
         return new UnmodSortedIterator<Long>() {
-            long s = start;
-            @Override public boolean hasNext() { return s <= end; }
+            long idx = start;
+            @Override public boolean hasNext() { return idx < end; }
             @Override public Long next() {
-                Long t = s;
-                s = s + 1;
+                Long t = idx;
+                idx = idx + 1;
                 return t;
             }
         };

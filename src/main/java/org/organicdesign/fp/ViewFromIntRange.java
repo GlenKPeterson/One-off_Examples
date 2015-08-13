@@ -17,12 +17,12 @@ import org.organicdesign.fp.ephemeral.View;
 
 public class ViewFromIntRange implements View<Long> {
 
-    private final IntRange range;
+    private final RangeOfLong range;
     private long idx = 0;
 
-    ViewFromIntRange(IntRange r) { range = r; }
+    ViewFromIntRange(RangeOfLong r) { range = r; }
 
-    static View<Long> of(IntRange r) {
+    static View<Long> of(RangeOfLong r) {
         if ((r == null) || (r.size() < 1)) { return View.emptyView(); }
         return new ViewFromIntRange(r);
     }
