@@ -11,10 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
-import org.organicdesign.fp.FunctionUtils;
-import org.organicdesign.fp.Option;
 import org.organicdesign.fp.collections.ImList;
 import org.organicdesign.fp.collections.UnmodListIterator;
 import org.organicdesign.fp.tuple.Tuple2;

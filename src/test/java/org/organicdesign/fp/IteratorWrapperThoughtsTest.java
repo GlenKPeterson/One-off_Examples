@@ -1,4 +1,4 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
 public class IteratorWrapperThoughtsTest {
 //    // Time ImVectorImplementation vs. java.util.ArrayList to prove that performance does not degrade

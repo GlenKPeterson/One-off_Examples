@@ -1,4 +1,4 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
 import junit.framework.TestCase;
 import org.junit.Test;
@@ -107,7 +107,14 @@ public class TransDescTest extends TestCase {
                            return accum;
                        }));
         assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6),
-                     td.appendArray(new Integer[] { 4, 5, 6 })
+                     td.appendArray(new Integer[]{4, 5, 6})
+                       .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
+                           accum.add(i);
+                           return accum;
+                       }));
+        assertEquals(Arrays.asList(2, 3, 4, 5, 6, 7),
+                     td.append(Arrays.asList(4, 5, 6))
+                       .map(i -> i + 1)
                        .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                            accum.add(i);
                            return accum;

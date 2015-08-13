@@ -11,10 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
-import org.organicdesign.fp.Mutable;
-import org.organicdesign.fp.experiments.collection.mutable.MutableLinkedList;
+import org.organicdesign.fp.collection.mutable.MutableLinkedList;
 
 import java.util.ArrayList;
 import java.util.Arrays;

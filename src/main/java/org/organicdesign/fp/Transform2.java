@@ -1,4 +1,4 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
 // We model this as a linked list so that each transition can have it's own output type, building a type-safe bridge
 // from first operation to the last.

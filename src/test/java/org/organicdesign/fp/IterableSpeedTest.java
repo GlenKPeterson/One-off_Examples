@@ -1,7 +1,6 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
 import org.junit.Test;
-import org.organicdesign.fp.Option;
 import org.organicdesign.fp.ephemeral.View;
 import org.organicdesign.fp.function.Function0;
 import org.organicdesign.fp.function.Function1;

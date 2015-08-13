@@ -1,4 +1,4 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
 import org.organicdesign.fp.collections.UnmodSortedIterable;
 import org.organicdesign.fp.collections.UnmodSortedIterator;

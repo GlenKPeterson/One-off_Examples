@@ -1,4 +1,4 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;

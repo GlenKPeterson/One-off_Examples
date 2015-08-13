@@ -1,6 +1,5 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
-import org.organicdesign.fp.Option;
 import org.organicdesign.fp.function.Function1;
 import org.organicdesign.fp.function.Function2;
 

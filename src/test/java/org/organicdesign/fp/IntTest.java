@@ -11,12 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.organicdesign.fp.experiments.math.Int;
+import org.organicdesign.fp.math.Int;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

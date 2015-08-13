@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.organicdesign.fp.experiments;
-
-import java.util.List;
+package org.organicdesign.fp;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
@@ -99,4 +99,6 @@ public class IntRangeTest {
         assertEquals(l.get(1), IntRange.of(35, 67));
         assertEquals(l.get(2), IntRange.of(68, 100));
     }
+
+
 }

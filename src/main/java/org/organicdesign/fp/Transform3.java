@@ -1,6 +1,5 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
-import org.organicdesign.fp.Mutable;
 import org.organicdesign.fp.collections.UnmodIterable;
 import org.organicdesign.fp.collections.UnmodSortedIterator;
 import org.organicdesign.fp.function.Function1;

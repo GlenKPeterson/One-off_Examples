@@ -11,11 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
 import org.organicdesign.fp.collections.UnmodSortedIterable;
 import org.organicdesign.fp.collections.UnmodSortedIterator;
-import org.organicdesign.fp.experiments.math.Rational;
+import org.organicdesign.fp.math.Rational;
 
 import java.util.ArrayList;
 import java.util.List;

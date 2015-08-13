@@ -1,6 +1,5 @@
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
-import org.organicdesign.fp.Transformable;
 import org.organicdesign.fp.collections.UnmodIterable;
 import org.organicdesign.fp.collections.UnmodSortedIterator;
 import org.organicdesign.fp.function.Function1;
@@ -21,7 +20,7 @@ import java.util.NoSuchElementException;
  */
 public abstract class TransDesc<A> implements Transformable<A> {
 
-    // TODO: Need to ensure that take comes after drop!
+    // TODO: Make an xform package and break all these out in there.  They can be package-scope instead of public, but all stuck together like this is a mess.
 
     enum OpStrategy { HANDLE_INTERNALLY, ASK_SUPPLIER, CANNOT_HANDLE; }
 
@@ -63,6 +62,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
          */
         OpStrategy take(long t);
 
+        // TODO: Mutable sources should record all drops, appends, (and takes?) then in a separate step right before processing, combine them together as appropriate.
         class MutableIterableSource<T> extends OpRun implements MutableSource<T> {
             private static final long IGNORE_TAKE = -1;
             final Iterator<T> items;
@@ -183,6 +183,11 @@ public abstract class TransDesc<A> implements Transformable<A> {
                 return OpStrategy.HANDLE_INTERNALLY;
             }
 
+//            @Override public OpStrategy append(MutableListSource nextSrc) {
+//                size = size + nextSrc.size;
+//                return OpStrategy.HANDLE_INTERNALLY;
+//            }
+
             @Override public String toString() {
                 return "MutableListSource(idx:" + idx + ",size:" + size + ")";
             }
@@ -224,6 +229,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
         public OpStrategy drop(long num) { return OpStrategy.CANNOT_HANDLE; }
 
         public OpStrategy take(long num) { return OpStrategy.CANNOT_HANDLE; }
+
+//        public OpStrategy append(MutableSource nextSrc) { return OpStrategy.CANNOT_HANDLE; }
 
         /**
          We need to model this as a separate op for when the previous op is CANNOT_HANDLE.  It is
@@ -333,8 +340,23 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
+            MutableSource ms = new MutableSource.MutableListSource<>(src.list, 0);
             RunList ret = prevOp.toRunList();
-            return RunList.of(ret, new MutableSource.MutableListSource<>(src.list, 0));
+            int i = ret.list.size() - 1;
+//              System.out.println("\tchecking previous items to see if they can handle a drop...");
+            if (i > -1) {
+                OpRun opRun = ret.list.get(i);
+                if (opRun instanceof MutableSourceProvider) {
+                    RunList ret2 = RunList.of(ret, ms);
+                    ret2.list = ret.list;
+                    return ret2;
+                }
+//                OpStrategy earlierA = opRun.append(ms);
+//                if (earlierA == OpStrategy.HANDLE_INTERNALLY) {
+//                    return ret;
+//                }
+            }
+            return RunList.of(ret, ms);
         }
     }
 
@@ -593,7 +615,6 @@ public abstract class TransDesc<A> implements Transformable<A> {
     // =============================================================================================
     // These will come from Transformable, but (will be) overridden to have a different return type.
 
-    // TODO: TransDesc<A> append(Iterable<? extends A> is) and append(List<? extends A> ls)
     public TransDesc<A> append(List<? extends A> list) {
         return new AppendListDesc<>(this, new SourceProviderListDesc<>(list));
     }

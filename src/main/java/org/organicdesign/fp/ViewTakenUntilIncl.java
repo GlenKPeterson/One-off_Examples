@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.organicdesign.fp.experiments;
+package org.organicdesign.fp;
 
-import org.organicdesign.fp.Option;
 import org.organicdesign.fp.ephemeral.View;
 import org.organicdesign.fp.function.Function1;
 

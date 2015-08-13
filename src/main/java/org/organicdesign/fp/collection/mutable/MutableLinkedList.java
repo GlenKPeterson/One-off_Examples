@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.organicdesign.fp.experiments.collection.mutable;
+package org.organicdesign.fp.collection.mutable;
 
 public class MutableLinkedList<T> {
     private Cell<T> first = null;

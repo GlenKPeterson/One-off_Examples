@@ -1,7 +1,4 @@
-package org.organicdesign.fp.experiments;
-
-import org.organicdesign.fp.experiments.ConcurrentXform;
-import org.organicdesign.fp.experiments.IntRange;
+package org.organicdesign.fp;
 
 public class ConcurrencyTest {
 
