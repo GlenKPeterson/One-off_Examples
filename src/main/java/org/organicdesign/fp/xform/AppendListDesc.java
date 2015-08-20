@@ -1,5 +1,9 @@
 package org.organicdesign.fp.xform;
 
+/**
+ Represents the results of a previous transformation pre-pended to a list of additional items.
+ @param <T>
+ */
 class AppendListDesc<T> extends TransDesc<T> {
     final SourceProviderListDesc<T> src;
 

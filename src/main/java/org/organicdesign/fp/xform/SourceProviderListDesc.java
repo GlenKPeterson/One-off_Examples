@@ -15,6 +15,10 @@ package org.organicdesign.fp.xform;
 
 import java.util.List;
 
+/**
+ Immutable description of a List-based source for a transformation.
+ @param <T> the type of items contained in the List.
+ */
 class SourceProviderListDesc<T> extends TransDesc<T> {
     final List<? extends T> list;
     SourceProviderListDesc(List<? extends T> l) { super(null); list = l; }
