@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 
 // We model this as a linked list so that each transition can have it's own output type, building a
 // type-safe bridge from first operation to the last.
@@ -183,7 +184,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
                 return OpStrategy.HANDLE_INTERNALLY;
             }
 
-//            @Override public OpStrategy append(MutableListSource nextSrc) {
+//            @Override public OpStrategy concatList(MutableListSource nextSrc) {
 //                size = size + nextSrc.size;
 //                return OpStrategy.HANDLE_INTERNALLY;
 //            }
@@ -230,7 +231,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
         public OpStrategy take(long num) { return OpStrategy.CANNOT_HANDLE; }
 
-//        public OpStrategy append(MutableSource nextSrc) { return OpStrategy.CANNOT_HANDLE; }
+//        public OpStrategy concatList(MutableSource nextSrc) { return OpStrategy.CANNOT_HANDLE; }
 
         /**
          We need to model this as a separate op for when the previous op is CANNOT_HANDLE.  It is
@@ -351,7 +352,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
                     ret2.list = ret.list;
                     return ret2;
                 }
-//                OpStrategy earlierA = opRun.append(ms);
+//                OpStrategy earlierA = opRun.concatList(ms);
 //                if (earlierA == OpStrategy.HANDLE_INTERNALLY) {
 //                    return ret;
 //                }
@@ -615,15 +616,15 @@ public abstract class TransDesc<A> implements Transformable<A> {
     // =============================================================================================
     // These will come from Transformable, but (will be) overridden to have a different return type.
 
-    public TransDesc<A> append(List<? extends A> list) {
+    public TransDesc<A> concatList(List<? extends A> list) {
         return new AppendListDesc<>(this, new SourceProviderListDesc<>(list));
     }
 
-    public TransDesc<A> append(Iterable<? extends A> list) {
+    public TransDesc<A> concatIterable(Iterable<? extends A> list) {
         return new AppendIterDesc<>(this, new SourceProviderIterableDesc<>(list));
     }
 
-    public TransDesc<A> appendArray(A[] list) {
+    public TransDesc<A> concatArray(A[] list) {
         return new AppendArrayDesc<>(this, new SourceProviderArrayDesc<>(list));
     }
 
@@ -661,6 +662,15 @@ public abstract class TransDesc<A> implements Transformable<A> {
         return takeWhile((Function1<? super A,Boolean>) function1).foldLeft(ident, function2);
     }
 
+    /** We will probably allow this some day, but for now, it's deprecated to avoid confusion. */
+    @Override
+    @Deprecated
+    public void forEach(Consumer<? super A> action) {
+        throw new UnsupportedOperationException("forEach() is a void method on Iterable.  " +
+                                                "Use other forEach() which returns a Transform.");
+    }
+
+    // TODO: This conflicts with Iterable.forEach() which returns void.  Rename to forAll() or remove.
     @Override
     public TransDesc<A> forEach(Function1<? super A, ?> f) {
         return filter(a -> {

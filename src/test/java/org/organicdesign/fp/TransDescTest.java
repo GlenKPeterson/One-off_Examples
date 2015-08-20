@@ -95,25 +95,25 @@ public class TransDescTest extends TestCase {
                            return accum;
                        }));
         assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6),
-                     td.append(Arrays.asList(4, 5, 6))
+                     td.concatList(Arrays.asList(4, 5, 6))
                        .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                            accum.add(i);
                            return accum;
                        }));
         assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6),
-                     td.append(imSortedSet(4, 5, 6))
+                     td.concatIterable(imSortedSet(4, 5, 6))
                        .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                            accum.add(i);
                            return accum;
                        }));
         assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6),
-                     td.appendArray(new Integer[]{4, 5, 6})
+                     td.concatArray(new Integer[]{4, 5, 6})
                        .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                            accum.add(i);
                            return accum;
                        }));
         assertEquals(Arrays.asList(2, 3, 4, 5, 6, 7),
-                     td.append(Arrays.asList(4, 5, 6))
+                     td.concatList(Arrays.asList(4, 5, 6))
                        .map(i -> i + 1)
                        .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                            accum.add(i);
@@ -222,7 +222,7 @@ public class TransDescTest extends TestCase {
                        .flatMap(i -> PersistentVector.of(i, i * 10, i * 100))
                        .drop(5)
                        .take(6)
-                       .append(Arrays.asList(91, 92, 93))
+                       .concatList(Arrays.asList(91, 92, 93))
                        .foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                            accum.add(i);
                            return accum;
