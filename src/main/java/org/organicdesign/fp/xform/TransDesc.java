@@ -44,17 +44,17 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //            .flatMap(s -> Arrays.asList(s, s, s))
 //            .foldLeft(0, (count, s) -> count + 1);
 
-    /** Static factory methods */
+    /** Static factory method */
     public static <T> TransDesc<T> fromArray(T[] list) {
         return new SourceProviderArrayDesc<>(list);
     }
 
-    /** Static factory methods */
+    /** Static factory method */
     public static <T> TransDesc<T> from(List<T> list) {
         return new SourceProviderListDesc<>(list);
     }
 
-    /** Static factory methods */
+    /** Static factory method */
     public static <T> TransDesc<T> from(Iterable<T> list) {
         return new SourceProviderIterableDesc<>(list);
     }
@@ -67,7 +67,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
     // Constructor
     TransDesc(TransDesc pre) { prevOp = pre; }
 
-    // This is the main method of this whole file.  Everything else lives to serve this.
+    // This is the main method of this whole package.  Everything else lives to serve this.
     // We used a linked-list to build the type-safe operations so if that code compiles, the types
     // should work out here too.  However, for performance, we don't want to be stuck creating and
     // passing Options around, nor do we want a telescoping stack of hasNext() and next() calls.
