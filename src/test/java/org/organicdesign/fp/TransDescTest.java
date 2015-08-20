@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.organicdesign.fp.collections.PersistentVector;
+import org.organicdesign.fp.xform.TransDesc;
 
 import java.util.ArrayList;
 import java.util.Arrays;

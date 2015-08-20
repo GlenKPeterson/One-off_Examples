@@ -5,6 +5,7 @@ import org.organicdesign.fp.ephemeral.View;
 import org.organicdesign.fp.function.Function0;
 import org.organicdesign.fp.function.Function1;
 import org.organicdesign.fp.permanent.Sequence;
+import org.organicdesign.fp.xform.TransDesc;
 
 import java.util.Arrays;
 import java.util.Iterator;
