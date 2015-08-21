@@ -22,8 +22,6 @@ import java.util.function.Consumer;
  */
 public abstract class TransDesc<A> implements Transformable<A> {
 
-    // TODO: Make an xform package and break all these out in there.  They can be package-scope instead of public, but all stuck together like this is a mess.
-
     enum OpStrategy { HANDLE_INTERNALLY, ASK_SUPPLIER, CANNOT_HANDLE; }
 
     private static final Object TERMINATE = new Object();
@@ -225,6 +223,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
         @Override public MutableSource iterator() { return source; }
     }
 
+    /** Describes an append() operation, but does not perform it. */
     private static class AppendIterDesc<T> extends TransDesc<T> {
         final SourceProviderIterableDesc<T> src;
 
@@ -239,9 +238,14 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
     /**
      Describes a "drop" operation.  Drops will be pushed as early in the operation-list as possible,
-     ideally being done using one-time pointer addition on the source.  When that is not possible,
-     a Drop op-code is created (eventually implemented as a filter function).  Subsequent drop ops
-     will be combined into the earliest drop (for speed).
+     ideally being done using one-time pointer addition on the source.
+
+     I have working source-pointer-addition code, but it added a fair amount of complexity to
+     implement it for Lists and arrays, but not for Iterables in general, so it is not currently
+     (2015-08-21) part of this implementation.
+
+     When source-pointer-addition is not possible, a Drop op-code is created (implemented as a
+     filter function).  Subsequent drop ops will be combined into the earliest drop (for speed).
      @param <T> the expected input type to drop.
      */
     private static class DropDesc<T> extends TransDesc<T> {
@@ -285,6 +289,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
         }
     }
 
+    /** Describes a filter() operation, but does not perform it. */
     private static class FilterDesc<T> extends TransDesc<T> {
         final Function1<? super T,Boolean> f;
 
@@ -298,6 +303,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
         }
     }
 
+    /** Describes a map() operation, but does not perform it. */
     private static class MapDesc<T,U> extends TransDesc<U> {
         final Function1<? super T,? extends U> f;
 
@@ -311,6 +317,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
         }
     }
 
+    /** Describes a flatMap() operation, but does not perform it. */
     private static class FlatMapDesc<T,U> extends TransDesc<U> {
         final Function1<? super T,Iterable<U>> f;
         FlatMapDesc(TransDesc<T> prev, Function1<? super T,Iterable<U>> func) {
@@ -326,10 +333,10 @@ public abstract class TransDesc<A> implements Transformable<A> {
     }
 
     /**
-     Describes a "take" operation.  Takes will be pushed as early in the operation-list as possible,
-     ideally being done using one-time pointer addition on the source.  When that is not possible,
-     a Take op-code is created (eventually implemented as a filter function).  Subsequent take ops
-     will be combined into the earliest take (for speed).
+     Describes a "take" operation, but does not perform it.  Takes will be pushed as early in the
+     operation-list as possible, ideally being done using one-time pointer addition on the source.
+     When source pointer addition is not possible, a Take op-code is created (implemented as a
+     filter function).  Subsequent take ops will be combined into the earliest take (for speed).
      @param <T> the expected input type to take.
      */
     private static class TakeDesc<T> extends TransDesc<T> {
