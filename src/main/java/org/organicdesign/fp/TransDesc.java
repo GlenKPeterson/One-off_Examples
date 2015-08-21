@@ -35,77 +35,6 @@ public abstract class TransDesc<A> implements Transformable<A> {
     }
 
     /**
-     Like Iterator, this interface is inherently not thread-safe, so wrap it in something
-     thread-safe before sharing across threads.
-     */
-    private static class MutableSource<T> extends OpRun implements UnmodSortedIterator<T> {
-//        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
-//            @Override public boolean hasNext() { return false; }
-//            @Override public Object next() { throw new NoSuchElementException("No more elements"); }
-//            @Override public OpStrategy drop(long i) { return OpStrategy.HANDLE_INTERNALLY; }
-//            @Override public int take(long i) { return i; }
-//        };
-//        @SuppressWarnings("unchecked")
-//        static <X> MutableListSource<X> empty() { return (MutableListSource<X>) EMPTY; }
-
-        // TODO: Mutable sources should record all drops, appends, (and takes?) then in a separate step right before processing, combine them together as appropriate.
-        private static final long IGNORE_TAKE = -1;
-        final Iterator<T> items;
-        long drop = 0;
-        long numToTake = IGNORE_TAKE;
-
-        MutableSource(Iterable<T> ls) { items = ls.iterator(); }
-
-        private void doDrop() {
-            while ((drop > 0) && items.hasNext()) {
-                drop = drop - 1;
-                items.next();
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean hasNext() {
-            if (numToTake == 0) { return false; }
-            if (drop > 0) { doDrop(); }
-            return items.hasNext();
-        }
-
-        /** {@inheritDoc} */
-        @Override public T next() {
-            if (drop > 0) { doDrop(); }
-            if (numToTake > IGNORE_TAKE) {
-                if (numToTake == 0) {
-                    throw new NoSuchElementException("Called next() without calling hasNext." +
-                                                     " Completed specified take - no more" +
-                                                     " elements left.");
-                }
-                numToTake = numToTake - 1;
-            }
-            return items.next();
-        }
-
-        /** {@inheritDoc} */
-        @Override public OpStrategy drop(long d) {
-            if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
-            drop = drop + d;
-            return OpStrategy.HANDLE_INTERNALLY;
-        }
-
-        /** {@inheritDoc} */
-        @Override public OpStrategy take(long take) {
-            if (take < 0) {
-                throw new IllegalArgumentException("Can't take less than zero items.");
-            }
-            if (numToTake == IGNORE_TAKE) {
-                numToTake = take;
-            } else if (take < numToTake) {
-                numToTake = take;
-            }
-            return OpStrategy.HANDLE_INTERNALLY;
-        }
-    } // end interface MutableSource
-
-    /**
      OpRuns are mutable operations that the transform carries out when it is run.  This is in
      contrast to the TransDesc which are like the "source code" or transformation description.
      OpRuns are like compiled "op codes" of the transform.
@@ -124,7 +53,10 @@ public abstract class TransDesc<A> implements Transformable<A> {
          @return  whether the source can handle the take, or pass-through (ask-supplier), or can't
          do either.
          */
-        public OpStrategy drop(long num) { return OpStrategy.CANNOT_HANDLE; }
+        public Or<Long,OpStrategy> drop(long num) {
+            return (num < 1) ? Or.good(0L)
+                             : Or.bad(OpStrategy.CANNOT_HANDLE);
+        }
 
         /**
          Takes as many items as the source can handle.
@@ -154,9 +86,9 @@ public abstract class TransDesc<A> implements Transformable<A> {
                     return Boolean.TRUE;
                 };
             }
-            @Override public OpStrategy drop(long num) {
+            @Override public Or<Long,OpStrategy> drop(long num) {
                 leftToDrop = leftToDrop + num;
-                return OpStrategy.HANDLE_INTERNALLY;
+                return Or.good(num);
             }
         }
 
@@ -166,7 +98,9 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
         private static class MapRun extends OpRun {
             MapRun(Function1 func) { map = func; }
-            @Override public OpStrategy drop(long num) { return OpStrategy.ASK_SUPPLIER; }
+            @Override public Or<Long,OpStrategy> drop(long num) {
+                return Or.bad(OpStrategy.ASK_SUPPLIER);
+            }
             @Override public OpStrategy take(long num) { return OpStrategy.ASK_SUPPLIER; }
         }
 
@@ -208,7 +142,61 @@ public abstract class TransDesc<A> implements Transformable<A> {
                 return OpStrategy.HANDLE_INTERNALLY;
             }
         }
-    }
+    } // end class OpRun
+
+    /**
+     Like Iterator, this interface is inherently not thread-safe, so wrap it in something
+     thread-safe before sharing across threads.
+     */
+    private static class MutableSource<T> extends OpRun implements UnmodSortedIterator<T> {
+//        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
+//            @Override public boolean hasNext() { return false; }
+//            @Override public Object next() { throw new NoSuchElementException("No more elements"); }
+//            @Override public OpStrategy drop(long i) { return OpStrategy.HANDLE_INTERNALLY; }
+//            @Override public int take(long i) { return i; }
+//        };
+//        @SuppressWarnings("unchecked")
+//        static <X> MutableListSource<X> empty() { return (MutableListSource<X>) EMPTY; }
+
+        // TODO: Mutable sources should record all drops, appends, (and takes?) then in a separate step right before processing, combine them together as appropriate.
+        private static final long IGNORE_TAKE = -1;
+        final Iterator<T> items;
+        long numToTake = IGNORE_TAKE;
+
+        MutableSource(Iterable<T> ls) { items = ls.iterator(); }
+
+        /** {@inheritDoc} */
+        @Override public boolean hasNext() {
+            if (numToTake == 0) { return false; }
+            return items.hasNext();
+        }
+
+        /** {@inheritDoc} */
+        @Override public T next() {
+            if (numToTake > IGNORE_TAKE) {
+                if (numToTake == 0) {
+                    throw new NoSuchElementException("Called next() without calling hasNext." +
+                                                     " Completed specified take - no more" +
+                                                     " elements left.");
+                }
+                numToTake = numToTake - 1;
+            }
+            return items.next();
+        }
+
+        /** {@inheritDoc} */
+        @Override public OpStrategy take(long take) {
+            if (take < 0) {
+                throw new IllegalArgumentException("Can't take less than zero items.");
+            }
+            if (numToTake == IGNORE_TAKE) {
+                numToTake = take;
+            } else if (take < numToTake) {
+                numToTake = take;
+            }
+            return OpStrategy.HANDLE_INTERNALLY;
+        }
+    } // end class MutableSource
 
     /**
      A RunList is like the compiled program from a Transform Description.  It contains a source
@@ -257,8 +245,8 @@ public abstract class TransDesc<A> implements Transformable<A> {
      @param <T> the expected input type to drop.
      */
     private static class DropDesc<T> extends TransDesc<T> {
-        private final long drop;
-        DropDesc(TransDesc<T> prev, long d) { super(prev); drop = d; }
+        private final long dropAmt;
+        DropDesc(TransDesc<T> prev, long d) { super(prev); dropAmt = d; }
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
@@ -266,28 +254,33 @@ public abstract class TransDesc<A> implements Transformable<A> {
             RunList ret = prevOp.toRunList();
             int i = ret.list.size() - 1;
 //              System.out.println("\tchecking previous items to see if they can handle a drop...");
-            OpStrategy earlierDs = null;
+            Or<Long,OpStrategy> earlierDs = null;
             for (; i >= 0; i--) {
                 OpRun opRun = ret.list.get(i);
-                earlierDs = opRun.drop(drop);
-                if (earlierDs == OpStrategy.CANNOT_HANDLE) {
+                earlierDs = opRun.drop(dropAmt);
+                if (earlierDs.isBad() && (earlierDs.bad() == OpStrategy.CANNOT_HANDLE) ) {
 //                        System.out.println("\tNone can handle a drop...");
                     break;
-                } else if (earlierDs == OpStrategy.HANDLE_INTERNALLY) {
+                } else if (earlierDs.isGood()) {
 //                        System.out.println("\tHandled internally by " + opRun);
                     return ret;
                 }
             }
-            if ( (earlierDs != OpStrategy.CANNOT_HANDLE) && (i <= 0) ) {
-                OpStrategy srcDs = ret.source.drop(drop);
-                if (srcDs == OpStrategy.HANDLE_INTERNALLY) {
+            if ( !Or.bad(OpStrategy.CANNOT_HANDLE).equals(earlierDs) && (i <= 0) ) {
+                Or<Long,OpStrategy> srcDs = ret.source.drop(dropAmt);
+                if (srcDs.isGood()) {
+                    if (srcDs.good() == dropAmt) {
 //                        System.out.println("\tHandled internally by source: " + ret.source);
-                    return ret;
+                        return ret;
+                    } else {
+                        // TODO: Think about this and implement!
+                        throw new UnsupportedOperationException("Not implemented yet!");
+                    }
                 }
             }
 //                System.out.println("\tSource could not handle drop.");
-//                System.out.println("\tMake a drop for " + drop + " items.");
-            ret.list.add(new OpRun.DropRun(drop));
+//                System.out.println("\tMake a drop for " + dropAmt + " items.");
+            ret.list.add(new OpRun.DropRun(dropAmt));
             return ret;
         }
     }
