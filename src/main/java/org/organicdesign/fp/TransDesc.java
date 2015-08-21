@@ -6,6 +6,7 @@ import org.organicdesign.fp.function.Function1;
 import org.organicdesign.fp.function.Function2;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -37,7 +38,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
      Like Iterator, this interface is inherently not thread-safe, so wrap it in something
      thread-safe before sharing across threads.
      */
-    interface MutableSource<T> extends UnmodSortedIterator<T> {
+    private static class MutableSource<T> extends OpRun implements UnmodSortedIterator<T> {
 //        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
 //            @Override public boolean hasNext() { return false; }
 //            @Override public Object next() { throw new NoSuchElementException("No more elements"); }
@@ -47,171 +48,61 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //        @SuppressWarnings("unchecked")
 //        static <X> MutableListSource<X> empty() { return (MutableListSource<X>) EMPTY; }
 
-        /**
-         Drops as many items as the source can handle.
-         @param d the number of items to drop
-         @return  whether the source can handle the take, or pass-through (ask-supplier), or can't
-         do either.
-         */
-        OpStrategy drop(long d);
-
-        /**
-         Takes as many items as the source can handle.
-         @param t the number of items to take.
-         @return whether the source can handle the take, or pass-through (ask-supplier), or can't
-         do either.
-         */
-        OpStrategy take(long t);
-
         // TODO: Mutable sources should record all drops, appends, (and takes?) then in a separate step right before processing, combine them together as appropriate.
-        class MutableIterableSource<T> extends OpRun implements MutableSource<T> {
-            private static final long IGNORE_TAKE = -1;
-            final Iterator<T> items;
-            long drop = 0;
-            long numToTake = IGNORE_TAKE;
+        private static final long IGNORE_TAKE = -1;
+        final Iterator<T> items;
+        long drop = 0;
+        long numToTake = IGNORE_TAKE;
 
-            MutableIterableSource(Iterable<T> ls) { items = ls.iterator(); }
+        MutableSource(Iterable<T> ls) { items = ls.iterator(); }
 
-            private void doDrop() {
-                while ((drop > 0) && items.hasNext()) {
-                    drop = drop - 1;
-                    items.next();
+        private void doDrop() {
+            while ((drop > 0) && items.hasNext()) {
+                drop = drop - 1;
+                items.next();
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean hasNext() {
+            if (numToTake == 0) { return false; }
+            if (drop > 0) { doDrop(); }
+            return items.hasNext();
+        }
+
+        /** {@inheritDoc} */
+        @Override public T next() {
+            if (drop > 0) { doDrop(); }
+            if (numToTake > IGNORE_TAKE) {
+                if (numToTake == 0) {
+                    throw new NoSuchElementException("Called next() without calling hasNext." +
+                                                     " Completed specified take - no more" +
+                                                     " elements left.");
                 }
+                numToTake = numToTake - 1;
             }
+            return items.next();
+        }
 
-            /** {@inheritDoc} */
-            @Override public boolean hasNext() {
-                if (numToTake == 0) { return false; }
-                if (drop > 0) { doDrop(); }
-                return items.hasNext();
+        /** {@inheritDoc} */
+        @Override public OpStrategy drop(long d) {
+            if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
+            drop = drop + d;
+            return OpStrategy.HANDLE_INTERNALLY;
+        }
+
+        /** {@inheritDoc} */
+        @Override public OpStrategy take(long take) {
+            if (take < 0) {
+                throw new IllegalArgumentException("Can't take less than zero items.");
             }
-
-            /** {@inheritDoc} */
-            @Override public T next() {
-                if (drop > 0) { doDrop(); }
-                if (numToTake > IGNORE_TAKE) {
-                    if (numToTake == 0) {
-                        throw new NoSuchElementException("Called next() without calling hasNext." +
-                                                         " Completed specified take - no more" +
-                                                         " elements left.");
-                    }
-                    numToTake = numToTake - 1;
-                }
-                return items.next();
+            if (numToTake == IGNORE_TAKE) {
+                numToTake = take;
+            } else if (take < numToTake) {
+                numToTake = take;
             }
-
-            /** {@inheritDoc} */
-            @Override public OpStrategy drop(long d) {
-                if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
-                drop = drop + d;
-                return OpStrategy.HANDLE_INTERNALLY;
-            }
-
-            /** {@inheritDoc} */
-            @Override public OpStrategy take(long take) {
-                if (take < 0) {
-                    throw new IllegalArgumentException("Can't take less than zero items.");
-                }
-                if (numToTake == IGNORE_TAKE) {
-                    numToTake = take;
-                } else if (take < numToTake) {
-                    numToTake = take;
-                }
-                return OpStrategy.HANDLE_INTERNALLY;
-            }
-        } // end class MutableIterableSource
-
-        class MutableListSource<T> extends OpRun implements MutableSource<T> {
-            final List<T> items;
-            int idx;
-            int size;
-
-            /** Do not use.  This is only so that MutableArraySource can inherit from this class. */
-            MutableListSource() { items = null; };
-
-            MutableListSource(List<T> ls, int i) { items = ls; idx = i; size = items.size(); }
-
-            /** {@inheritDoc} */
-            @Override public boolean hasNext() {
-                return idx < size;
-            }
-
-            /** {@inheritDoc} */
-            @Override public T next() {
-                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my
-                // tests.
-                T ret = items.get(idx);
-                idx = idx + 1;
-                return ret;
-            }
-
-            /** {@inheritDoc} */
-            @Override public OpStrategy drop(long d) {
-                if (d > Integer.MAX_VALUE) {
-                    throw new IllegalArgumentException("Can't drop more than " + Integer.MAX_VALUE +
-                                                       " items");
-                } else if (d < 0) {
-                    throw new IllegalArgumentException("Makes no sense to drop less than 0 items");
-                }
-
-                if (d < 1) { return OpStrategy.HANDLE_INTERNALLY; }
-                int numItems = size - idx;
-                if (d > numItems) {
-                    idx = size; // used up.
-                } else {
-                    idx = idx + (int) d;
-                }
-                return OpStrategy.HANDLE_INTERNALLY;
-            }
-
-            /** {@inheritDoc} */
-            @Override public OpStrategy take(long take) {
-                if (take < 0) {
-                    throw new IllegalArgumentException("Makes no sense to take less than 0 items");
-                }
-                // Taking none is equivalent to an empty source.
-                if (take < 1) {
-                    idx = size;
-                    return OpStrategy.HANDLE_INTERNALLY;
-                }
-
-                // Taking more items than we have is not possible.  Just take all in that case.
-                int numItems = size - idx;
-                if (take < numItems) {
-                    size = idx + (int) take;
-                }
-                // If taking more than all the items, the take is meaningless.
-                return OpStrategy.HANDLE_INTERNALLY;
-            }
-
-//            @Override public OpStrategy concatList(MutableListSource nextSrc) {
-//                size = size + nextSrc.size;
-//                return OpStrategy.HANDLE_INTERNALLY;
-//            }
-
-            @Override public String toString() {
-                return "MutableListSource(idx:" + idx + ",size:" + size + ")";
-            }
-        } // end class MutableListSource
-
-        // This was no faster.
-        class MutableArraySource<T> extends MutableListSource<T> {
-            final T[] itemArray;
-
-            MutableArraySource(T[] ls, int i) {
-                super();
-                itemArray = ls; idx = i; size = itemArray.length;
-            }
-
-            /** {@inheritDoc} */
-            @Override public T next() {
-                // Breaking into 3 statements was a clear 8% speed-up over the ++ operator in my
-                // tests.
-                T ret = itemArray[idx];
-                idx = idx + 1;
-                return ret;
-            }
-        } // end class MutableArraySource
+            return OpStrategy.HANDLE_INTERNALLY;
+        }
     } // end interface MutableSource
 
     /**
@@ -227,8 +118,20 @@ public abstract class TransDesc<A> implements Transformable<A> {
         Function1<Object,MutableSourceProvider> flatMap = null;
 //        Function1<Object,Boolean> keepGoing = null;
 
+        /**
+         Drops as many items as the source can handle.
+         @param num the number of items to drop
+         @return  whether the source can handle the take, or pass-through (ask-supplier), or can't
+         do either.
+         */
         public OpStrategy drop(long num) { return OpStrategy.CANNOT_HANDLE; }
 
+        /**
+         Takes as many items as the source can handle.
+         @param num the number of items to take.
+         @return whether the source can handle the take, or pass-through (ask-supplier), or can't
+         do either.
+         */
         public OpStrategy take(long num) { return OpStrategy.CANNOT_HANDLE; }
 
 //        public OpStrategy concatList(MutableSource nextSrc) { return OpStrategy.CANNOT_HANDLE; }
@@ -334,33 +237,6 @@ public abstract class TransDesc<A> implements Transformable<A> {
         @Override public MutableSource iterator() { return source; }
     }
 
-    private static class AppendListDesc<T> extends TransDesc<T> {
-        final SourceProviderListDesc<T> src;
-
-        AppendListDesc(TransDesc<T> prev, SourceProviderListDesc<T> s) { super(prev); src = s; }
-
-        @SuppressWarnings("unchecked")
-        @Override RunList toRunList() {
-            MutableSource ms = new MutableSource.MutableListSource<>(src.list, 0);
-            RunList ret = prevOp.toRunList();
-            int i = ret.list.size() - 1;
-//              System.out.println("\tchecking previous items to see if they can handle a drop...");
-            if (i > -1) {
-                OpRun opRun = ret.list.get(i);
-                if (opRun instanceof MutableSourceProvider) {
-                    RunList ret2 = RunList.of(ret, ms);
-                    ret2.list = ret.list;
-                    return ret2;
-                }
-//                OpStrategy earlierA = opRun.concatList(ms);
-//                if (earlierA == OpStrategy.HANDLE_INTERNALLY) {
-//                    return ret;
-//                }
-            }
-            return RunList.of(ret, ms);
-        }
-    }
-
     private static class AppendIterDesc<T> extends TransDesc<T> {
         final SourceProviderIterableDesc<T> src;
 
@@ -369,19 +245,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
             RunList ret = prevOp.toRunList();
-            return RunList.of(ret, new MutableSource.MutableIterableSource<>(src.list));
-        }
-    }
-
-    private static class AppendArrayDesc<T> extends TransDesc<T> {
-        final SourceProviderArrayDesc<T> src;
-
-        AppendArrayDesc(TransDesc<T> prev, SourceProviderArrayDesc<T> s) { super(prev); src = s; }
-
-        @SuppressWarnings("unchecked")
-        @Override RunList toRunList() {
-            RunList ret = prevOp.toRunList();
-            return RunList.of(ret, new MutableSource.MutableArraySource<>(src.list, 0));
+            return RunList.of(ret, new MutableSource<>(src.list));
         }
     }
 
@@ -519,40 +383,17 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //            .flatMap(s -> Arrays.asList(s, s, s))
 //            .foldLeft(0, (count, s) -> count + 1);
 
-    static class SourceProviderListDesc<T> extends TransDesc<T> {
-        private final List<? extends T> list;
-        SourceProviderListDesc(List<? extends T> l) { super(null); list = l; }
-        @Override RunList toRunList() {
-            return RunList.of(null, new MutableSource.MutableListSource<>(list, 0));
-        }
-    }
-
-    static class SourceProviderArrayDesc<T> extends TransDesc<T> {
-        private final T[] list;
-        SourceProviderArrayDesc(T[] l) { super(null); list = l; }
-        @Override RunList toRunList() {
-            // Why am I keeping this arround when it's no faster than using a List?  In theory, it
-            // could be faster, so I keep it around just in case.
-            return RunList.of(null, new MutableSource.MutableArraySource<>(list, 0));
-        }
-    }
-
     static class SourceProviderIterableDesc<T> extends TransDesc<T> {
         private final Iterable<? extends T> list;
         SourceProviderIterableDesc(Iterable<? extends T> l) { super(null); list = l; }
         @Override RunList toRunList() {
-            return RunList.of(null, new MutableSource.MutableIterableSource<>(list));
+            return RunList.of(null, new MutableSource<>(list));
         }
     }
 
     /** Static factory methods */
     public static <T> TransDesc<T> fromArray(T[] list) {
-        return new SourceProviderArrayDesc<>(list);
-    }
-
-    /** Static factory methods */
-    public static <T> TransDesc<T> from(List<T> list) {
-        return new SourceProviderListDesc<>(list);
+        return new SourceProviderIterableDesc<>(Arrays.asList(list));
     }
 
     /** Static factory methods */
@@ -617,7 +458,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
     // These will come from Transformable, but (will be) overridden to have a different return type.
 
     public TransDesc<A> concatList(List<? extends A> list) {
-        return new AppendListDesc<>(this, new SourceProviderListDesc<>(list));
+        return concatIterable(list);
     }
 
     public TransDesc<A> concatIterable(Iterable<? extends A> list) {
@@ -625,7 +466,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
     }
 
     public TransDesc<A> concatArray(A[] list) {
-        return new AppendArrayDesc<>(this, new SourceProviderArrayDesc<>(list));
+        return concatIterable(Arrays.asList(list));
     }
 
     /** The number of items to drop from the beginning of the output. */
