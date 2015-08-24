@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.Consumer;
 
 // We model this as a linked list so that each transition can have it's own output type, building a
 // type-safe bridge from first operation to the last.
@@ -501,23 +500,6 @@ public abstract class TransDesc<A> implements Transformable<A> {
         // I'm coding this as a map operation that either returns the source, or a TERMINATE
         // sentinel value.
         return takeWhile((Function1<? super A,Boolean>) function1).foldLeft(ident, function2);
-    }
-
-    /** We will probably allow this some day, but for now, it's deprecated to avoid confusion. */
-    @Override
-    @Deprecated
-    public void forEach(Consumer<? super A> action) {
-        throw new UnsupportedOperationException("forEach() is a void method on Iterable.  " +
-                                                "Use other forEach() which returns a Transform.");
-    }
-
-    // TODO: This conflicts with Iterable.forEach() which returns void.  Rename to forAll() or remove.
-    @Override
-    public TransDesc<A> forEach(Function1<? super A, ?> f) {
-        return filter(a -> {
-            f.apply(a);
-            return Boolean.TRUE;
-        });
     }
 
     @Override public TransDesc<A> filter(Function1<? super A,Boolean> f) {

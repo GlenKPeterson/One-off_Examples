@@ -355,7 +355,7 @@ public class IterableSpeedTest {
         benchmark("for (i=0;...)", forLoop);
 
         benchmark("SeqFromArray1", () -> {
-            Sequence<Long> s1 = Sequence.of(ls);
+            Sequence<Long> s1 = Sequence.ofArray(ls);
             while (s1.head().isSome()) {
                 if (s1.head().get() < -1) { break; }
                 s1 = s1.tail();
@@ -373,7 +373,7 @@ public class IterableSpeedTest {
 //        });
 
         benchmark("ViewFromArray", () -> {
-            View<Long> s1 = View.of(ls);
+            View<Long> s1 = View.ofArray(ls);
             Option<Long> item = s1.next();
             while (item.isSome()) {
                 if (item.get() < -1) { break; }

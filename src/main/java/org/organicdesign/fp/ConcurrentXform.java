@@ -48,7 +48,6 @@ public class ConcurrentXform {
                     // System.out.println("\tidx: " + idx.value() + " value: " + (Int) i);
                     ret[idx.value()] = item;
                     idx.increment();
-                    return null;
                 });
             } else {
                 System.out.println("Starting thread: " + i);
@@ -60,7 +59,6 @@ public class ConcurrentXform {
     //                        System.out.println("\tidx: " + idx.value() + " value: " + (Int) i);
                             ret[idx.value()] = item;
                             idx.increment();
-                            return null;
                         });
                     }
                 };
