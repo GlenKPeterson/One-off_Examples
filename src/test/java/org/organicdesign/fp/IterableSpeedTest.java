@@ -11,7 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-import static org.organicdesign.fp.StaticImports.unmod;
+import static org.organicdesign.fp.StaticImports.unmodList;
 
 public class IterableSpeedTest {
 
@@ -434,7 +434,7 @@ public class IterableSpeedTest {
         });
 
         benchmark("unmodArrayItr", () -> {
-            Iterator<Long> iter = unmod(lsList).iterator();
+            Iterator<Long> iter = unmodList(lsList).iterator();
             Long l = null;
             while (iter.hasNext()) {
                 l = iter.next();
