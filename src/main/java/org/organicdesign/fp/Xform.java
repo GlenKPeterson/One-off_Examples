@@ -20,6 +20,13 @@ import java.util.NoSuchElementException;
  addition instead of iteration) and also hides the mutability otherwise inherent in a
  transformation.
 
+ Xform is an abstract class.  Most of the methods on Xform produce immutable descriptions of actions
+ to take at a later time.  These are represented by ___Desc classes.  When foldLeft() is called
+ (or any of the helper methods that wrap it), that produces a result by first stringing together
+ a bunch of Operations (____Op classes) and then "running" them.  This is analogous to compiling
+ a program and running it.  The ____Desc classes are like the immutable source, the ____Op classes
+ like the op-codes it's compiled into.
+
  Special thanks to Nathan Williams for pointing me toward separating the mutation from the
  description of a transformation.  Also to Paul Phillips (@extempore2) whose lectures provided
  an outline for what was ideal and also what was important.  All errors are my own.
