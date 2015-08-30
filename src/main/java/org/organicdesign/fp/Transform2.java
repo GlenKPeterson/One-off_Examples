@@ -4,34 +4,34 @@ package org.organicdesign.fp;
 // from first operation to the last.
 public interface Transform2<A> { // extends Transformable<A> {
 //
-//    abstract class OpRun {
-//        OpRun nextOp = null;
+//    abstract class Operation {
+//        Operation nextOp = null;
 //        // TODO: Function1<Object,Boolean> preTerm = null;
 //        public Function1<Object,Boolean> filter = null;
 //        public Function1 map = null;
 //        public Function1<Object,List> flatMap = null;
 //        // TODO: Function1<Object,Boolean> postTerm = null;
-////        public abstract OpRun drop(int num);
-//        private static class ListSourceRun extends OpRun {
+////        public abstract Operation drop(int num);
+//        private static class ListSourceRun extends Operation {
 //            final List as;
 //            int idx = 0;
 //
-//            ListSourceRun(List list, OpRun next) { as = list; nextOp = next; }
+//            ListSourceRun(List list, Operation next) { as = list; nextOp = next; }
 //
 ////            @Override
-//            public OpRun drop(int num) {
+//            public Operation drop(int num) {
 //                idx = idx + num;
 //                return this;
 //            }
 //        }
 //
-//        private static class FilterOp extends OpRun {
-//            FilterOp(Function1<Object,Boolean> func, OpRun next) {
+//        private static class FilterOp extends Operation {
+//            FilterOp(Function1<Object,Boolean> func, Operation next) {
 //                filter = func; nextOp = next;
 //            }
 //
 ////            @Override
-////            public OpRun drop(int num) {
+////            public Operation drop(int num) {
 ////                return new FilterOp(prevOp.drop(num), f);
 ////            }
 //
@@ -45,8 +45,8 @@ public interface Transform2<A> { // extends Transformable<A> {
 ////            }
 //        }
 //
-//        private static class MapOp extends OpRun {
-//            MapOp(Function1 func, OpRun next) {
+//        private static class MapOp extends Operation {
+//            MapOp(Function1 func, Operation next) {
 //                map = func; nextOp = next;
 //            }
 //
@@ -61,17 +61,17 @@ public interface Transform2<A> { // extends Transformable<A> {
 ////            }
 //        }
 //
-//        private static class FlatMapOp extends OpRun {
+//        private static class FlatMapOp extends Operation {
 //            // TODO: This is mutable state.  Figure out how to push it to a mutable action and keep the "OpDesc" immutable.
 ////            ListSourceDesc<U> cache = null;
 //            int numToDrop = 0;
 //
-//            FlatMapOp(Function1<Object,List> func, int drop, OpRun next) {
+//            FlatMapOp(Function1<Object,List> func, int drop, Operation next) {
 //                flatMap = func; numToDrop = drop; nextOp = next;
 //            }
 //
 ////            @Override
-//            public OpRun drop(int num) {
+//            public Operation drop(int num) {
 //                return new FlatMapOp(flatMap, numToDrop + num, nextOp);
 //            }
 //
@@ -107,7 +107,7 @@ public interface Transform2<A> { // extends Transformable<A> {
 //
 //        /** Gets the next item. */
 ////        abstract Option<F> next();
-//        abstract void addOpRunToList(List<OpRun> ops, int drop, int take);
+//        abstract void addOpRunToList(List<Operation> ops, int drop, int take);
 //
 //        // Do I want to go back to modeling this as a separate step, then compress the steps
 //        // as much as possible to move the drop and take operations as early in the stream as possible.
@@ -145,7 +145,7 @@ public interface Transform2<A> { // extends Transformable<A> {
 ////                next = next();
 ////            }
 ////            return ret;
-//            List<OpRun> ops = new ArrayList<>();
+//            List<Operation> ops = new ArrayList<>();
 //            OpDesc desc = this;
 //            while (desc.prevOp != null) {
 //
@@ -154,11 +154,11 @@ public interface Transform2<A> { // extends Transformable<A> {
 //        }
 //
 //        @SuppressWarnings("unchecked")
-//        private <G> G _foldLeft(Iterable source, OpRun[] ops, int opIdx, G ident, Function2 combiner) {
+//        private <G> G _foldLeft(Iterable source, Operation[] ops, int opIdx, G ident, Function2 combiner) {
 //            Object ret = ident;
 //            for (Object o : source) {
 //                for (int j = opIdx; j < ops.length; j++) {
-//                    OpRun op = ops[j];
+//                    Operation op = ops[j];
 //                    if ( (op.filter != null) && !op.filter.apply(o) ) {
 //                        break; // stop processing this soruce item and go to the next one.
 //                    }

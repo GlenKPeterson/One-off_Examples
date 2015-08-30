@@ -114,7 +114,7 @@ public interface Transform3<A,B> { // extends Transformable<A> {
         Function1 map = null;
         Function1<Object,MutableSourceProvider> flatMap = null;
 
-//        public abstract OpRun drop(int num);
+//        public abstract Operation drop(int num);
 
 //        public abstract boolean doDrop(int num);
 

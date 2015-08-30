@@ -42,7 +42,7 @@ public abstract class Xform<A> implements Transformable<A> {
      contrast to the Xform which are like the "source code" or transformation description.
      OpRuns are like compiled "op codes" of the transform.
      */
-    static abstract class OpRun {
+    static abstract class Operation {
         // Time using a linked list of ops instead of array, so that we can easily remove ops from
         // the list when they are used up.
         Function1<Object,Boolean> filter = null;
@@ -77,7 +77,7 @@ public abstract class Xform<A> implements Transformable<A> {
          combined into the earliest single explicit drop op.  Such combinations are additive,
          meaning that drop(3).drop(5) is equivalent to drop(8).
          */
-        private static class DropOp extends OpRun {
+        private static class DropOp extends Operation {
             private long leftToDrop;
             DropOp(long drop) {
                 leftToDrop = drop;
@@ -95,11 +95,11 @@ public abstract class Xform<A> implements Transformable<A> {
             }
         }
 
-        private static class FilterOp extends OpRun {
+        private static class FilterOp extends Operation {
             FilterOp(Function1<Object,Boolean> func) { filter = func; }
         }
 
-        private static class MapOp extends OpRun {
+        private static class MapOp extends Operation {
             MapOp(Function1 func) { map = func; }
             @Override public Or<Long,OpStrategy> drop(long num) {
                 return Or.bad(OpStrategy.ASK_SUPPLIER);
@@ -109,7 +109,7 @@ public abstract class Xform<A> implements Transformable<A> {
 
         // TODO: FlatMap should drop and take internally using addition/subtraction on each output
         // TODO: list instead of testing each list item individually.
-        private static class FlatMapOp extends OpRun {
+        private static class FlatMapOp extends Operation {
 //            ListSourceDesc<U> cache = null;
 //            int numToDrop = 0;
 
@@ -122,7 +122,7 @@ public abstract class Xform<A> implements Transformable<A> {
          combined into the earliest single explicit take op.  Such combination is a pick-least of
          all the takes, meaning that take(5).take(3) is equivalent to take(3).
          */
-        private static class TakeOp extends OpRun {
+        private static class TakeOp extends Operation {
             private long numToTake;
             TakeOp(long take) {
                 numToTake = take;
@@ -145,13 +145,13 @@ public abstract class Xform<A> implements Transformable<A> {
                 return OpStrategy.HANDLE_INTERNALLY;
             }
         }
-    } // end class OpRun
+    } // end class Operation
 
     /**
      Like Iterator, this interface is inherently not thread-safe, so wrap it in something
      thread-safe before sharing across threads.
      */
-    private static class MutableSource<T> extends OpRun implements UnmodSortedIterator<T> {
+    private static class MutableSource<T> extends Operation implements UnmodSortedIterator<T> {
 //        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
 //            @Override public boolean hasNext() { return false; }
 //            @Override public Object next() { throw new NoSuchElementException("No more elements"); }
@@ -203,7 +203,7 @@ public abstract class Xform<A> implements Transformable<A> {
 
     /**
      A RunList is like the compiled program from a Transform Description.  It contains a source
-     and a list of OpRun op-codes.  Each of these is its own source provider, since the output
+     and a list of Operation op-codes.  Each of these is its own source provider, since the output
      of one transform can be the input to another.  FlatMap is implemented that way.  Notice that
      there are no types here: Since the input could be one type, and each map or flatmap operation
      could change that to another type, we ignore all that in the "compiled" version and just use
@@ -211,7 +211,7 @@ public abstract class Xform<A> implements Transformable<A> {
      */
     private static class RunList implements MutableSourceProvider {
         MutableSource source;
-        List<OpRun> list = new ArrayList<>();
+        List<Operation> list = new ArrayList<>();
         RunList next = null;
         RunList prev = null;
 
@@ -222,8 +222,8 @@ public abstract class Xform<A> implements Transformable<A> {
             return ret;
         }
 
-        OpRun[] opArray() {
-            return list.toArray(new OpRun[list.size()]);
+        Operation[] opArray() {
+            return list.toArray(new Operation[list.size()]);
         }
         @Override public MutableSource iterator() { return source; }
     }
@@ -265,8 +265,8 @@ public abstract class Xform<A> implements Transformable<A> {
 //              System.out.println("\tchecking previous items to see if they can handle a drop...");
             Or<Long,OpStrategy> earlierDs = null;
             for (; i >= 0; i--) {
-                OpRun opRun = ret.list.get(i);
-                earlierDs = opRun.drop(dropAmt);
+                Operation op = ret.list.get(i);
+                earlierDs = op.drop(dropAmt);
                 if (earlierDs.isBad() && (earlierDs.bad() == OpStrategy.CANNOT_HANDLE) ) {
 //                        System.out.println("\tNone can handle a drop...");
                     break;
@@ -289,7 +289,7 @@ public abstract class Xform<A> implements Transformable<A> {
             }
 //                System.out.println("\tSource could not handle drop.");
 //                System.out.println("\tMake a drop for " + dropAmt + " items.");
-            ret.list.add(new OpRun.DropOp(dropAmt));
+            ret.list.add(new Operation.DropOp(dropAmt));
             return ret;
         }
     }
@@ -303,7 +303,7 @@ public abstract class Xform<A> implements Transformable<A> {
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
             RunList ret = prevOp.toRunList();
-            ret.list.add(new OpRun.FilterOp((Function1<Object,Boolean>) f));
+            ret.list.add(new Operation.FilterOp((Function1<Object,Boolean>) f));
             return ret;
         }
     }
@@ -317,7 +317,7 @@ public abstract class Xform<A> implements Transformable<A> {
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
             RunList ret = prevOp.toRunList();
-            ret.list.add(new OpRun.MapOp(f));
+            ret.list.add(new Operation.MapOp(f));
             return ret;
         }
     }
@@ -332,7 +332,7 @@ public abstract class Xform<A> implements Transformable<A> {
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
             RunList ret = prevOp.toRunList();
-            ret.list.add(new OpRun.FlatMapOp((Function1) f));
+            ret.list.add(new Operation.FlatMapOp((Function1) f));
             return ret;
         }
     }
@@ -356,8 +356,8 @@ public abstract class Xform<A> implements Transformable<A> {
 //              System.out.println("\tchecking previous items to see if they can handle a take...");
             OpStrategy earlierTs = null;
             for (; i >= 0; i--) {
-                OpRun opRun = ret.list.get(i);
-                earlierTs = opRun.take(take);
+                Operation op = ret.list.get(i);
+                earlierTs = op.take(take);
                 if (earlierTs == OpStrategy.CANNOT_HANDLE) {
 //                        System.out.println("\tNone can handle a take...");
                     break;
@@ -375,7 +375,7 @@ public abstract class Xform<A> implements Transformable<A> {
             }
 //                System.out.println("\tSource could not handle take.");
 //                System.out.println("\tMake a take for " + take + " items.");
-            ret.list.add(new OpRun.TakeOp(take));
+            ret.list.add(new Operation.TakeOp(take));
             return ret;
         }
     }
@@ -424,7 +424,7 @@ public abstract class Xform<A> implements Transformable<A> {
     // is 2.6 times faster than wrapping items type-safely in Options and 10 to 100 times faster
     // than lazily evaluated and cached linked-list, Sequence model.
     @SuppressWarnings("unchecked")
-    private <H> H _foldLeft(Iterable source, OpRun[] ops, int opIdx, H ident, Function2 reducer) {
+    private <H> H _foldLeft(Iterable source, Operation[] ops, int opIdx, H ident, Function2 reducer) {
         Object ret = ident;
 
         // This is a label - the first one I have used in Java in years, or maybe ever.
@@ -432,7 +432,7 @@ public abstract class Xform<A> implements Transformable<A> {
         sourceLoop:
         for (Object o : source) {
             for (int j = opIdx; j < ops.length; j++) {
-                OpRun op = ops[j];
+                Operation op = ops[j];
                 if ( (op.filter != null) && !op.filter.apply(o) ) {
                     // stop processing this source item and go to the next one.
                     continue sourceLoop;
