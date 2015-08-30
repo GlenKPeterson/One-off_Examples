@@ -1,7 +1,5 @@
 package org.organicdesign.fp;
 
-import org.organicdesign.fp.collections.UnmodIterable;
-import org.organicdesign.fp.collections.UnmodSortedIterator;
 import org.organicdesign.fp.function.Function1;
 import org.organicdesign.fp.function.Function2;
 
@@ -9,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 // We model this as a linked list so that each transition can have it's own output type, building a
 // type-safe bridge from first operation to the last.
@@ -40,21 +37,21 @@ public abstract class Xform<A> implements Transformable<A> {
     @SuppressWarnings("unchecked")
     private A terminate() { return (A) TERMINATE; }
 
-    interface MutableSourceProvider<T> extends UnmodIterable<T> {
-        @Override MutableSource<T> iterator();
-    }
+//    interface MutableSourceProvider<T> extends UnmodIterable<T> {
+//        @Override UnmodSortedIterator<T> iterator();
+//    }
 
     /**
-     OpRuns are mutable operations that the transform carries out when it is run.  This is in
-     contrast to the Xform which are like the "source code" or transformation description.
-     OpRuns are like compiled "op codes" of the transform.
+     These are mutable operations that the transform carries out when it is run.  This is like the
+     compiled "op codes" in contrast to the Xform is like the immutable "source code" of the
+     transformation description.
      */
     static abstract class Operation {
         // Time using a linked list of ops instead of array, so that we can easily remove ops from
         // the list when they are used up.
         Function1<Object,Boolean> filter = null;
         Function1 map = null;
-        Function1<Object,MutableSourceProvider> flatMap = null;
+        Function1<Object,Iterable> flatMap = null;
 //        Function1<Object,Boolean> keepGoing = null;
 
         /**
@@ -76,7 +73,7 @@ public abstract class Xform<A> implements Transformable<A> {
          */
         public OpStrategy take(long num) { return OpStrategy.CANNOT_HANDLE; }
 
-//        public OpStrategy concatList(MutableSource nextSrc) { return OpStrategy.CANNOT_HANDLE; }
+//        public OpStrategy concatList(Iterator nextSrc) { return OpStrategy.CANNOT_HANDLE; }
 
         /**
          We need to model this as a separate op for when the previous op is CANNOT_HANDLE.  It is
@@ -120,7 +117,7 @@ public abstract class Xform<A> implements Transformable<A> {
 //            ListSourceDesc<U> cache = null;
 //            int numToDrop = 0;
 
-            FlatMapOp(Function1<Object,MutableSourceProvider> func) { flatMap = func; }
+            FlatMapOp(Function1<Object,Iterable> func) { flatMap = func; }
         }
 
         /**
@@ -158,72 +155,77 @@ public abstract class Xform<A> implements Transformable<A> {
      Like Iterator, this interface is inherently not thread-safe, so wrap it in something
      thread-safe before sharing across threads.
      */
-    private static class MutableSource<T> extends Operation implements UnmodSortedIterator<T> {
-//        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
-//            @Override public boolean hasNext() { return false; }
-//            @Override public Object next() { throw new NoSuchElementException("No more elements"); }
-//            @Override public OpStrategy drop(long i) { return OpStrategy.HANDLE_INTERNALLY; }
-//            @Override public int take(long i) { return i; }
-//        };
-//        @SuppressWarnings("unchecked")
-//        static <X> MutableListSource<X> empty() { return (MutableListSource<X>) EMPTY; }
-
-        // TODO: Mutable sources should record all drops, appends, (and takes?) then in a separate step right before processing, combine them together as appropriate.
-        private static final long IGNORE_TAKE = -1;
-        final Iterator<T> items;
-        long numToTake = IGNORE_TAKE;
-
-        MutableSource(Iterable<T> ls) { items = ls.iterator(); }
-
-        /** {@inheritDoc} */
-        @Override public boolean hasNext() {
-            if (numToTake == 0) { return false; }
-            return items.hasNext();
-        }
-
-        /** {@inheritDoc} */
-        @Override public T next() {
-            if (numToTake > IGNORE_TAKE) {
-                if (numToTake == 0) {
-                    throw new NoSuchElementException("Called next() without calling hasNext." +
-                                                     " Completed specified take - no more" +
-                                                     " elements left.");
-                }
-                numToTake = numToTake - 1;
-            }
-            return items.next();
-        }
-
-        /** {@inheritDoc} */
-        @Override public OpStrategy take(long take) {
-            if (take < 0) {
-                throw new IllegalArgumentException("Can't take less than zero items.");
-            }
-            if (numToTake == IGNORE_TAKE) {
-                numToTake = take;
-            } else if (take < numToTake) {
-                numToTake = take;
-            }
-            return OpStrategy.HANDLE_INTERNALLY;
-        }
-    } // end class MutableSource
+//    private static class MutableSource<T> extends Operation implements UnmodSortedIterator<T> {
+////        public static final MutableSource<?> EMPTY = new MutableSource<Object>() {
+////            @Override public boolean hasNext() { return false; }
+////            @Override public Object next() { throw new NoSuchElementException("No more elements"); }
+////            @Override public OpStrategy drop(long i) { return OpStrategy.HANDLE_INTERNALLY; }
+////            @Override public int take(long i) { return i; }
+////        };
+////        @SuppressWarnings("unchecked")
+////        static <X> MutableListSource<X> empty() { return (MutableListSource<X>) EMPTY; }
+//
+//        // TODO: Mutable sources should record all drops, appends, (and takes?) then in a separate step right before processing, combine them together as appropriate.
+//        private static final long IGNORE_TAKE = -1;
+//        final Iterator<T> items;
+//        long numToTake = IGNORE_TAKE;
+//
+//        MutableSource(Iterable<T> ls) { items = ls.iterator(); }
+//
+//        /** {@inheritDoc} */
+//        @Override public boolean hasNext() {
+//            if (numToTake == 0) { return false; }
+//            return items.hasNext();
+//        }
+//
+//        /** {@inheritDoc} */
+//        @Override public T next() {
+//            if (numToTake > IGNORE_TAKE) {
+//                if (numToTake == 0) {
+//                    throw new NoSuchElementException("Called next() without calling hasNext." +
+//                                                     " Completed specified take - no more" +
+//                                                     " elements left.");
+//                }
+//                numToTake = numToTake - 1;
+//            }
+//            return items.next();
+//        }
+//
+//        /** {@inheritDoc} */
+//        @Override public OpStrategy take(long take) {
+//            if (take < 0) {
+//                throw new IllegalArgumentException("Can't take less than zero items.");
+//            }
+//            if (numToTake == IGNORE_TAKE) {
+//                numToTake = take;
+//            } else if (take < numToTake) {
+//                numToTake = take;
+//            }
+//            return OpStrategy.HANDLE_INTERNALLY;
+//        }
+//    } // end class MutableSource
 
     /**
-     A RunList is like the compiled program from a Transform Description.  It contains a source
-     and a list of Operation op-codes.  Each of these is its own source provider, since the output
-     of one transform can be the input to another.  FlatMap is implemented that way.  Notice that
-     there are no types here: Since the input could be one type, and each map or flatmap operation
-     could change that to another type, we ignore all that in the "compiled" version and just use
-     Objects.  That lets us use the simplest iteration primitives (for speed).
+     A RunList is a list of Operations "complied" from an Xform.  It contains an Iterable data
+     source (or some day and array source or List source) and a List of Operation op-codes.
+
+     A RunList is also a SourceProvider, since the output of one transform can be the input to
+     another.  FlatMap is implemented that way.  Notice that there are almost no generic types used
+     here: Since the input could be one type, and each map or flatmap operation could change that to
+     another type.
+
+     For speed, we ignore all that in the "compiled" version and just use Objects and avoid any
+     wrapping or casting.
      */
-    private static class RunList implements MutableSourceProvider {
-        MutableSource source;
+    private static class RunList implements Iterable {
+        Iterable source;
         List<Operation> list = new ArrayList<>();
         RunList next = null;
         RunList prev = null;
 
-        private RunList(RunList prv, MutableSource src) { prev = prv; source = src; }
-        public static RunList of(RunList prv, MutableSource src) {
+        private RunList(RunList prv, Iterable src) { prev = prv; source = src; }
+
+        public static RunList of(RunList prv, Iterable src) {
             RunList ret = new RunList(prv, src);
             if (prv != null) { prv.next = ret; }
             return ret;
@@ -232,7 +234,50 @@ public abstract class Xform<A> implements Transformable<A> {
         Operation[] opArray() {
             return list.toArray(new Operation[list.size()]);
         }
-        @Override public MutableSource iterator() { return source; }
+        @Override public Iterator iterator() { return source.iterator(); }
+    }
+
+    /**
+     When iterator() is called, the AppendOp processes the previous source and operation into
+     an ArrayList.  Then yields an iterator that yield the result of that operation until it runs
+     out.  Then continues to yield the appended items until they run out, at which point hasNext()
+     returns false;
+     */
+    private static class AppendOp extends RunList {
+        private AppendOp(RunList prv, Iterable src) { super(prv, src); }
+
+        @Override public Iterator iterator() {
+            ArrayList prevSrc = _foldLeft(prev, prev.opArray(), 0, new ArrayList(),
+                                          new Function2<ArrayList,Object,ArrayList>() {
+                                              @SuppressWarnings("unchecked")
+                                              @Override
+                                              public ArrayList applyEx(ArrayList res, Object item) throws Exception {
+                                                  res.add(item);
+                                                  return res;
+                                              }
+                                          }
+
+            );
+            //noinspection unchecked
+            return new Iterator() {
+                Iterator innerIter = prevSrc.iterator();
+                boolean usingPrevSrc = true;
+                /** {@inheritDoc} */
+                @Override public boolean hasNext() {
+                    if (innerIter.hasNext()) {
+                        return true;
+                    } else if (usingPrevSrc) {
+                        usingPrevSrc = false;
+                        innerIter = source.iterator();
+                    }
+                    return innerIter.hasNext();
+                }
+
+                @Override public Object next() {
+                    return innerIter.next();
+                }
+            };
+        } // end iterator()
     }
 
     /** Describes an append() operation, but does not perform it. */
@@ -243,8 +288,7 @@ public abstract class Xform<A> implements Transformable<A> {
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
-            RunList ret = prevOp.toRunList();
-            return RunList.of(ret, new MutableSource<>(src.list));
+            return new AppendOp(prevOp.toRunList(), src);
         }
     }
 
@@ -282,18 +326,18 @@ public abstract class Xform<A> implements Transformable<A> {
                     return ret;
                 }
             }
-            if ( !Or.bad(OpStrategy.CANNOT_HANDLE).equals(earlierDs) && (i <= 0) ) {
-                Or<Long,OpStrategy> srcDs = ret.source.drop(dropAmt);
-                if (srcDs.isGood()) {
-                    if (srcDs.good() == dropAmt) {
-//                        System.out.println("\tHandled internally by source: " + ret.source);
-                        return ret;
-                    } else {
-                        // TODO: Think about this and implement!
-                        throw new UnsupportedOperationException("Not implemented yet!");
-                    }
-                }
-            }
+//            if ( !Or.bad(OpStrategy.CANNOT_HANDLE).equals(earlierDs) && (i <= 0) ) {
+//                Or<Long,OpStrategy> srcDs = ret.source.drop(dropAmt);
+//                if (srcDs.isGood()) {
+//                    if (srcDs.good() == dropAmt) {
+////                        System.out.println("\tHandled internally by source: " + ret.source);
+//                        return ret;
+//                    } else {
+//                        // TODO: Think about this and implement!
+//                        throw new UnsupportedOperationException("Not implemented yet!");
+//                    }
+//                }
+//            }
 //                System.out.println("\tSource could not handle drop.");
 //                System.out.println("\tMake a drop for " + dropAmt + " items.");
             ret.list.add(new Operation.DropOp(dropAmt));
@@ -373,13 +417,13 @@ public abstract class Xform<A> implements Transformable<A> {
                     return ret;
                 }
             }
-            if ( (earlierTs != OpStrategy.CANNOT_HANDLE) && (i <= 0) ) {
-                OpStrategy srcDs = ret.source.take(take);
-                if (srcDs == OpStrategy.HANDLE_INTERNALLY) {
-//                        System.out.println("\tHandled internally by source: " + ret.source);
-                    return ret;
-                }
-            }
+//            if ( (earlierTs != OpStrategy.CANNOT_HANDLE) && (i <= 0) ) {
+//                OpStrategy srcDs = ret.source.take(take);
+//                if (srcDs == OpStrategy.HANDLE_INTERNALLY) {
+////                        System.out.println("\tHandled internally by source: " + ret.source);
+//                    return ret;
+//                }
+//            }
 //                System.out.println("\tSource could not handle take.");
 //                System.out.println("\tMake a take for " + take + " items.");
             ret.list.add(new Operation.TakeOp(take));
@@ -399,7 +443,7 @@ public abstract class Xform<A> implements Transformable<A> {
         private final Iterable<? extends T> list;
         SourceProviderIterableDesc(Iterable<? extends T> l) { super(null); list = l; }
         @Override RunList toRunList() {
-            return RunList.of(null, new MutableSource<>(list));
+            return RunList.of(null, list);
         }
     }
 
@@ -431,7 +475,7 @@ public abstract class Xform<A> implements Transformable<A> {
     // is 2.6 times faster than wrapping items type-safely in Options and 10 to 100 times faster
     // than lazily evaluated and cached linked-list, Sequence model.
     @SuppressWarnings("unchecked")
-    private <H> H _foldLeft(Iterable source, Operation[] ops, int opIdx, H ident, Function2 reducer) {
+    private static <H> H _foldLeft(Iterable source, Operation[] ops, int opIdx, H ident, Function2 reducer) {
         Object ret = ident;
 
         // This is a label - the first one I have used in Java in years, or maybe ever.
@@ -492,18 +536,7 @@ public abstract class Xform<A> implements Transformable<A> {
 
         // Construct an optimized array of OpRuns (mutable operations for this run)
         RunList runList = toRunList();
-        // Go back to the first runlist:
-        while (runList.prev != null) { runList = runList.prev; }
-//            System.out.println("this: " + this + " runList: " + runList);
-
-        // Process the runlists in order.
-        B ret = ident;
-        while (runList != null) {
-            // Actually do the fold.
-            ret = _foldLeft(runList, runList.opArray(), 0, ret, reducer);
-            runList = runList.next;
-        }
-        return ret;
+        return _foldLeft(runList, runList.opArray(), 0, ident, reducer);
     }
 
     // TODO: Test.
