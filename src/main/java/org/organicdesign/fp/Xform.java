@@ -14,12 +14,18 @@ import java.util.NoSuchElementException;
 // We model this as a linked list so that each transition can have it's own output type, building a
 // type-safe bridge from first operation to the last.
 /**
- A description of operations to be performed.  When foldLeft() is called, transformation definition
- is "compiled" into a mutable transformation which is then carried out.  This allows certain
- performance shortcuts (such as doing a drop with index addition instead of iteration) and also
- hides the mutability inherent in a transformation.
+ An immutable description of operations to be performed (a transformation, transform, or x-form).
+ When foldLeft() is called, the Xform definition is "compiled" into a mutable transformation which
+ is then carried out.  This allows certain performance shortcuts (such as doing a drop with index
+ addition instead of iteration) and also hides the mutability otherwise inherent in a
+ transformation.
+
+ Special thanks to Nathan Williams for pointing me toward separating the mutation from the
+ description of a transformation.  Also to Paul Phillips (@extempore2) whose lectures provided
+ an outline for what was ideal and also what was important.  All errors are my own.
+ -Glen 2015-08-30
  */
-public abstract class TransDesc<A> implements Transformable<A> {
+public abstract class Xform<A> implements Transformable<A> {
 
     enum OpStrategy { HANDLE_INTERNALLY, ASK_SUPPLIER, CANNOT_HANDLE; }
 
@@ -33,7 +39,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
     /**
      OpRuns are mutable operations that the transform carries out when it is run.  This is in
-     contrast to the TransDesc which are like the "source code" or transformation description.
+     contrast to the Xform which are like the "source code" or transformation description.
      OpRuns are like compiled "op codes" of the transform.
      */
     static abstract class OpRun {
@@ -71,9 +77,9 @@ public abstract class TransDesc<A> implements Transformable<A> {
          combined into the earliest single explicit drop op.  Such combinations are additive,
          meaning that drop(3).drop(5) is equivalent to drop(8).
          */
-        private static class DropRun extends OpRun {
+        private static class DropOp extends OpRun {
             private long leftToDrop;
-            DropRun(long drop) {
+            DropOp(long drop) {
                 leftToDrop = drop;
                 filter = o -> {
                     if (leftToDrop > 0) {
@@ -89,12 +95,12 @@ public abstract class TransDesc<A> implements Transformable<A> {
             }
         }
 
-        private static class FilterRun extends OpRun {
-            FilterRun(Function1<Object,Boolean> func) { filter = func; }
+        private static class FilterOp extends OpRun {
+            FilterOp(Function1<Object,Boolean> func) { filter = func; }
         }
 
-        private static class MapRun extends OpRun {
-            MapRun(Function1 func) { map = func; }
+        private static class MapOp extends OpRun {
+            MapOp(Function1 func) { map = func; }
             @Override public Or<Long,OpStrategy> drop(long num) {
                 return Or.bad(OpStrategy.ASK_SUPPLIER);
             }
@@ -103,11 +109,11 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
         // TODO: FlatMap should drop and take internally using addition/subtraction on each output
         // TODO: list instead of testing each list item individually.
-        private static class FlatMapRun extends OpRun {
+        private static class FlatMapOp extends OpRun {
 //            ListSourceDesc<U> cache = null;
 //            int numToDrop = 0;
 
-            FlatMapRun(Function1<Object,MutableSourceProvider> func) { flatMap = func; }
+            FlatMapOp(Function1<Object,MutableSourceProvider> func) { flatMap = func; }
         }
 
         /**
@@ -116,9 +122,9 @@ public abstract class TransDesc<A> implements Transformable<A> {
          combined into the earliest single explicit take op.  Such combination is a pick-least of
          all the takes, meaning that take(5).take(3) is equivalent to take(3).
          */
-        private static class TakeRun extends OpRun {
+        private static class TakeOp extends OpRun {
             private long numToTake;
-            TakeRun(long take) {
+            TakeOp(long take) {
                 numToTake = take;
                 map = a -> {
                     if (numToTake > 0) {
@@ -223,10 +229,10 @@ public abstract class TransDesc<A> implements Transformable<A> {
     }
 
     /** Describes an append() operation, but does not perform it. */
-    private static class AppendIterDesc<T> extends TransDesc<T> {
+    private static class AppendIterDesc<T> extends Xform<T> {
         final SourceProviderIterableDesc<T> src;
 
-        AppendIterDesc(TransDesc<T> prev, SourceProviderIterableDesc<T> s) { super(prev); src = s; }
+        AppendIterDesc(Xform<T> prev, SourceProviderIterableDesc<T> s) { super(prev); src = s; }
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
@@ -247,9 +253,9 @@ public abstract class TransDesc<A> implements Transformable<A> {
      filter function).  Subsequent drop ops will be combined into the earliest drop (for speed).
      @param <T> the expected input type to drop.
      */
-    private static class DropDesc<T> extends TransDesc<T> {
+    private static class DropDesc<T> extends Xform<T> {
         private final long dropAmt;
-        DropDesc(TransDesc<T> prev, long d) { super(prev); dropAmt = d; }
+        DropDesc(Xform<T> prev, long d) { super(prev); dropAmt = d; }
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
@@ -283,50 +289,50 @@ public abstract class TransDesc<A> implements Transformable<A> {
             }
 //                System.out.println("\tSource could not handle drop.");
 //                System.out.println("\tMake a drop for " + dropAmt + " items.");
-            ret.list.add(new OpRun.DropRun(dropAmt));
+            ret.list.add(new OpRun.DropOp(dropAmt));
             return ret;
         }
     }
 
     /** Describes a filter() operation, but does not perform it. */
-    private static class FilterDesc<T> extends TransDesc<T> {
+    private static class FilterDesc<T> extends Xform<T> {
         final Function1<? super T,Boolean> f;
 
-        FilterDesc(TransDesc<T> prev, Function1<? super T,Boolean> func) { super(prev); f = func; }
+        FilterDesc(Xform<T> prev, Function1<? super T,Boolean> func) { super(prev); f = func; }
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
             RunList ret = prevOp.toRunList();
-            ret.list.add(new OpRun.FilterRun((Function1<Object,Boolean>) f));
+            ret.list.add(new OpRun.FilterOp((Function1<Object,Boolean>) f));
             return ret;
         }
     }
 
     /** Describes a map() operation, but does not perform it. */
-    private static class MapDesc<T,U> extends TransDesc<U> {
+    private static class MapDesc<T,U> extends Xform<U> {
         final Function1<? super T,? extends U> f;
 
-        MapDesc(TransDesc<T> prev, Function1<? super T,? extends U> func) { super(prev); f = func; }
+        MapDesc(Xform<T> prev, Function1<? super T,? extends U> func) { super(prev); f = func; }
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
             RunList ret = prevOp.toRunList();
-            ret.list.add(new OpRun.MapRun(f));
+            ret.list.add(new OpRun.MapOp(f));
             return ret;
         }
     }
 
     /** Describes a flatMap() operation, but does not perform it. */
-    private static class FlatMapDesc<T,U> extends TransDesc<U> {
+    private static class FlatMapDesc<T,U> extends Xform<U> {
         final Function1<? super T,Iterable<U>> f;
-        FlatMapDesc(TransDesc<T> prev, Function1<? super T,Iterable<U>> func) {
+        FlatMapDesc(Xform<T> prev, Function1<? super T,Iterable<U>> func) {
             super(prev); f = func;
         }
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
             RunList ret = prevOp.toRunList();
-            ret.list.add(new OpRun.FlatMapRun((Function1) f));
+            ret.list.add(new OpRun.FlatMapOp((Function1) f));
             return ret;
         }
     }
@@ -338,9 +344,9 @@ public abstract class TransDesc<A> implements Transformable<A> {
      filter function).  Subsequent take ops will be combined into the earliest take (for speed).
      @param <T> the expected input type to take.
      */
-    private static class TakeDesc<T> extends TransDesc<T> {
+    private static class TakeDesc<T> extends Xform<T> {
         private final long take;
-        TakeDesc(TransDesc<T> prev, long t) { super(prev); take = t; }
+        TakeDesc(Xform<T> prev, long t) { super(prev); take = t; }
 
         @SuppressWarnings("unchecked")
         @Override RunList toRunList() {
@@ -369,7 +375,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
             }
 //                System.out.println("\tSource could not handle take.");
 //                System.out.println("\tMake a take for " + take + " items.");
-            ret.list.add(new OpRun.TakeRun(take));
+            ret.list.add(new OpRun.TakeOp(take));
             return ret;
         }
     }
@@ -382,7 +388,7 @@ public abstract class TransDesc<A> implements Transformable<A> {
 //            .flatMap(s -> Arrays.asList(s, s, s))
 //            .foldLeft(0, (count, s) -> count + 1);
 
-    static class SourceProviderIterableDesc<T> extends TransDesc<T> {
+    static class SourceProviderIterableDesc<T> extends Xform<T> {
         private final Iterable<? extends T> list;
         SourceProviderIterableDesc(Iterable<? extends T> l) { super(null); list = l; }
         @Override RunList toRunList() {
@@ -391,22 +397,23 @@ public abstract class TransDesc<A> implements Transformable<A> {
     }
 
     /** Static factory methods */
-    public static <T> TransDesc<T> fromArray(T[] list) {
+    public static <T> Xform<T> fromArray(T[] list) {
         return new SourceProviderIterableDesc<>(Arrays.asList(list));
     }
 
     /** Static factory methods */
-    public static <T> TransDesc<T> from(Iterable<T> list) {
+    public static <T> Xform<T> from(Iterable<T> list) {
         return new SourceProviderIterableDesc<>(list);
     }
 
     // ========================================= Instance =========================================
 
     // Fields
-    final TransDesc prevOp;
+    /** This is the previous operation or source. */
+    final Xform prevOp;
 
     // Constructor
-    TransDesc(TransDesc pre) { prevOp = pre; }
+    Xform(Xform pre) { prevOp = pre; }
 
     // This is the main method of this whole file.  Everything else lives to serve this.
     // We used a linked-list to build the type-safe operations so if that code compiles, the types
@@ -456,20 +463,20 @@ public abstract class TransDesc<A> implements Transformable<A> {
     // =============================================================================================
     // These will come from Transformable, but (will be) overridden to have a different return type.
 
-    public TransDesc<A> concatList(List<? extends A> list) {
+    public Xform<A> concatList(List<? extends A> list) {
         return concatIterable(list);
     }
 
-    public TransDesc<A> concatIterable(Iterable<? extends A> list) {
+    public Xform<A> concatIterable(Iterable<? extends A> list) {
         return new AppendIterDesc<>(this, new SourceProviderIterableDesc<>(list));
     }
 
-    public TransDesc<A> concatArray(A[] list) {
+    public Xform<A> concatArray(A[] list) {
         return concatIterable(Arrays.asList(list));
     }
 
     /** The number of items to drop from the beginning of the output. */
-    @Override public TransDesc<A> drop(long n) { return new DropDesc<>(this, n); }
+    @Override public Xform<A> drop(long n) { return new DropDesc<>(this, n); }
 
     // Do we need a dropWhile???
 
@@ -502,15 +509,15 @@ public abstract class TransDesc<A> implements Transformable<A> {
         return takeWhile((Function1<? super A,Boolean>) function1).foldLeft(ident, function2);
     }
 
-    @Override public TransDesc<A> filter(Function1<? super A,Boolean> f) {
+    @Override public Xform<A> filter(Function1<? super A,Boolean> f) {
         return new FilterDesc<>(this, f);
     }
 
-    public <B> TransDesc<B> flatMap(Function1<? super A,Iterable<B>> f) {
+    public <B> Xform<B> flatMap(Function1<? super A,Iterable<B>> f) {
         return new FlatMapDesc<>(this, f);
     }
 
-    @Override public <B> TransDesc<B> map(Function1<? super A, ? extends B> f) {
+    @Override public <B> Xform<B> map(Function1<? super A, ? extends B> f) {
         return new MapDesc<>(this, f);
     }
 
@@ -518,11 +525,11 @@ public abstract class TransDesc<A> implements Transformable<A> {
 
     // TODO: Test.
     @Override
-    public TransDesc<A> take(long l) { return new TakeDesc<>(this, l); }
+    public Xform<A> take(long l) { return new TakeDesc<>(this, l); }
 
     // TODO: Test.
     @Override
-    public TransDesc<A> takeWhile(Function1<? super A,Boolean> function1) {
+    public Xform<A> takeWhile(Function1<? super A,Boolean> function1) {
         // I'm coding this as a map operation that either returns the source, or a TERMINATE
         // sentinel value.
         return new MapDesc<>(this, a -> function1.apply(a) ? a : terminate());

@@ -15,9 +15,9 @@ import java.util.List;
 import static org.organicdesign.fp.StaticImports.vec;
 
 @RunWith(JUnit4.class)
-public class TransDescTest extends TestCase {
+public class XformTest extends TestCase {
 
-    public static void basics(TransDesc<Integer> td) {
+    public static void basics(Xform<Integer> td) {
         assertEquals(Arrays.asList(1, 2, 3),
                      td.foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                          accum.add(i);
@@ -124,12 +124,12 @@ public class TransDescTest extends TestCase {
 
     @Test public void testBasics() {
         Integer[] src = new Integer[] {1, 2, 3};
-        basics(TransDesc.from(Arrays.asList(src)));
-        basics(TransDesc.from(View.ofArray(src).toImSortedSet((a, b) -> a - b)));
-        basics(TransDesc.fromArray(src));
+        basics(Xform.from(Arrays.asList(src)));
+        basics(Xform.from(View.ofArray(src).toImSortedSet((a, b) -> a - b)));
+        basics(Xform.fromArray(src));
     }
 
-    public static void longerCombinations(TransDesc<Integer> td) {
+    public static void longerCombinations(Xform<Integer> td) {
         assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9),
                      td.foldLeft(new ArrayList<>(), (List<Integer> accum, Integer i) -> {
                          accum.add(i);
@@ -232,9 +232,9 @@ public class TransDescTest extends TestCase {
 
     @Test public void longerCombinations() {
         Integer[] src = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-        longerCombinations(TransDesc.from(Arrays.asList(src)));
-        longerCombinations(TransDesc.from(View.ofArray(src).toImSortedSet((a, b) -> a - b)));
-        longerCombinations(TransDesc.fromArray(src));
+        longerCombinations(Xform.from(Arrays.asList(src)));
+        longerCombinations(Xform.from(View.ofArray(src).toImSortedSet((a, b) -> a - b)));
+        longerCombinations(Xform.fromArray(src));
     }
 
 }

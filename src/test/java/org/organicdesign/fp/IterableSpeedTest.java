@@ -468,12 +468,12 @@ public class IterableSpeedTest {
 //        });
 
         benchmark("Transform4List", () -> {
-            TransDesc<Long> t = TransDesc.from(lsList);
+            Xform<Long> t = Xform.from(lsList);
             return t.foldLeft(0L, (accum, i) -> i < -1 ? i : accum);
         });
 
         benchmark("Transform4Array", () -> {
-            TransDesc<Long> t = TransDesc.fromArray(ls);
+            Xform<Long> t = Xform.fromArray(ls);
             return t.foldLeft(0L, (accum, i) -> i < -1 ? i : accum);
         });
     }

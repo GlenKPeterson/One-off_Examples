@@ -25,14 +25,14 @@ public interface Transform2<A> { // extends Transformable<A> {
 //            }
 //        }
 //
-//        private static class FilterRun extends OpRun {
-//            FilterRun(Function1<Object,Boolean> func, OpRun next) {
+//        private static class FilterOp extends OpRun {
+//            FilterOp(Function1<Object,Boolean> func, OpRun next) {
 //                filter = func; nextOp = next;
 //            }
 //
 ////            @Override
 ////            public OpRun drop(int num) {
-////                return new FilterRun(prevOp.drop(num), f);
+////                return new FilterOp(prevOp.drop(num), f);
 ////            }
 //
 ////            @Override
@@ -45,8 +45,8 @@ public interface Transform2<A> { // extends Transformable<A> {
 ////            }
 //        }
 //
-//        private static class MapRun extends OpRun {
-//            MapRun(Function1 func, OpRun next) {
+//        private static class MapOp extends OpRun {
+//            MapOp(Function1 func, OpRun next) {
 //                map = func; nextOp = next;
 //            }
 //
@@ -61,18 +61,18 @@ public interface Transform2<A> { // extends Transformable<A> {
 ////            }
 //        }
 //
-//        private static class FlatMapRun extends OpRun {
+//        private static class FlatMapOp extends OpRun {
 //            // TODO: This is mutable state.  Figure out how to push it to a mutable action and keep the "OpDesc" immutable.
 ////            ListSourceDesc<U> cache = null;
 //            int numToDrop = 0;
 //
-//            FlatMapRun(Function1<Object,List> func, int drop, OpRun next) {
+//            FlatMapOp(Function1<Object,List> func, int drop, OpRun next) {
 //                flatMap = func; numToDrop = drop; nextOp = next;
 //            }
 //
 ////            @Override
 //            public OpRun drop(int num) {
-//                return new FlatMapRun(flatMap, numToDrop + num, nextOp);
+//                return new FlatMapOp(flatMap, numToDrop + num, nextOp);
 //            }
 //
 ////            @Override
