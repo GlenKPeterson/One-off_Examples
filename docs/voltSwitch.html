@@ -69,15 +69,10 @@ input:checked + .slider:before {
 <script src="https://code.highcharts.com/highcharts-more.js"></script>
 <script src="https://code.highcharts.com/modules/exporting.js"></script>
 <body>
-<h1 style="text-align:center;">Voltimeter</h1>
 <div id="theMeter" style="min-width: 310px; max-width: 400px; height: 300px; margin: 0 auto"></div>
-
-
 <script>
 var volts = 0;
-
 Highcharts.chart('theMeter', {
-
     chart: {
         animation: { duration: 160 },
         type: 'gauge',
@@ -88,7 +83,7 @@ Highcharts.chart('theMeter', {
     },
 
     title: {
-        text: 'Output'
+        text: 'Voltimeter'
     },
 
     pane: {
