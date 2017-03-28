@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voltimeter</title>
+  <title>Signed Voltimeter</title>
 <style>
 /* The switch - the box around the slider */
 .switch {
@@ -69,7 +69,7 @@ input:checked + .slider:before {
 <script src="https://code.highcharts.com/highcharts-more.js"></script>
 <script src="https://code.highcharts.com/modules/exporting.js"></script>
 <body>
-<h1>Unsigned Binary Integer "Voltimeter"</h1>
+<h1>"Two's Complement" Signed Binary Integer "Voltimeter"</h1>
 <div id="theMeter" style="min-width: 310px; max-width: 400px; height: 300px; margin: 0 auto"></div>
 <script>
 var volts = 0;
@@ -138,8 +138,8 @@ responsive: {
 },
     // the value axis
     yAxis: {
-        min: 0,
-        max: 16,
+        min: -9,
+        max: 9,
 
         minorTickInterval: 'auto',
         minorTickWidth: 1,
@@ -160,17 +160,17 @@ responsive: {
             text: 'Volts'
         },
         plotBands: [{
-            from: 0,
-            to: 8,
-            color: '#55BF3B' // green
+            from: -9,
+            to: -1,
+            color: '#DF5353' // red
         }, {
-            from: 8,
-            to: 10,
+            from: -1,
+            to: 0,
             color: '#DDDF0D' // yellow
         }, {
-            from: 10,
-            to: 16,
-            color: '#DF5353' // red
+            from: 0,
+            to: 9,
+            color: '#55BF3B' // green
         }]
     },
 
@@ -199,7 +199,7 @@ function (chart) {
 <div style="text-align:center;">
 <form action="#">
 <label class="switch">
-  <input type="checkbox" name="eight" value="8" onClick="if (this.checked) { volts += 8; } else {volts -= 8; }">
+  <input type="checkbox" name="eight" value="8" onClick="if (this.checked) { volts -= 8; } else {volts += 8; }">
   <div class="slider round"></div>
 </label>
 <label class="switch">
@@ -219,12 +219,10 @@ function (chart) {
 
 <div style="text-align:center;">
 <p><b>I.</b> What's output of each switch (in volts)?</p>
-<p><b>II.</b> What's the total maximum output of all the switches?</p>
-<p><b>III.</b> Can you create every positive whole number of volts between 0 and the maxiumum output?</p>
-<p><b>IV.</b> Which switch(es) determine whether the result is even or odd?</p>
+<p><b>II.</b> What's the minimum output of all the switches?</p>
+<p><b>III.</b> What's the maximum output of all the switches?</p>
+<p><b>IV.</b> Can you create every positive whole number of volts between the min and max output?</p>
 <p><b>V.</b> Is there more than one way to achieve any output voltage?</p>
-<p><b>VI.</b> Are the integer output values (from I. above) of the 4 switches related numerically?</p>
-<!-- <p><b>VII.</b> Produce each output voltage in ascending order, then in descending order, then just the even voltages.</p> -->
 </div>
 
 </body>
