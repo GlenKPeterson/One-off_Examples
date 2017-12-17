@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Floating Voltimeter</title>
+<style>
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin: 0 5px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {display:none;}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+</style>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/highcharts-more.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+</head>
+<body>
+<a href="index.html">home</a>
+<h1>IEEE Float "Voltimeter"</h1>
+
+<div style="text-align:center;">
+<form action="#">
+    <!--<p><b>Exponent:</b> <input type=text" name="exponent" value=""></p>-->
+<p><b>Result:</b> <input type=text" name="result" value=""></p>
+<div style="display:inline;background-color:#00f;">
+<label class="switch">
+  <input type="checkbox" name="sign" value="-1" onClick="if (this.checked) { voltSign = -1; } else { voltSign = 1; }">
+  <div class="slider round"></div>
+</label>
+</div>
+<div style="display:inline;background-color:#0f0;">
+<label class="switch">
+  <input type="checkbox" name="exp3" value="4" onClick="if (this.checked) { voltExp += 4; } else { voltExp -= 4; }">
+  <div class="slider round"></div>
+</label>
+<label class="switch">
+  <input type="checkbox" name="exp2" value="2" onClick="if (this.checked) { voltExp += 2; } else { voltExp -= 2; }">
+  <div class="slider round"></div>
+</label>
+<label class="switch">
+  <input type="checkbox" name="exp1" value="1" onClick="if (this.checked) { voltExp += 1; } else { voltExp -= 1; }">
+  <div class="slider round"></div>
+</label>
+</div><br>
+<div style="display:inline;background-color:#fcc;">
+<label class="switch">
+  <input type="checkbox" name="eight" value="8" onClick="if (this.checked) { voltFrac += 8; } else {voltFrac -= 8; }">
+  <div class="slider round"></div>
+</label>
+<label class="switch">
+  <input type="checkbox" name="four" value="4" onClick="if (this.checked) { voltFrac += 4; } else {voltFrac -= 4; }">
+  <div class="slider round"></div>
+</label>
+<label class="switch">
+  <input type="checkbox" name="two" value="2" onClick="if (this.checked) { voltFrac += 2; } else {voltFrac -= 2; }">
+  <div class="slider round"></div>
+</label>
+<label class="switch">
+  <input type="checkbox" name="one" value="1" onClick="if (this.checked) { voltFrac += 1; } else {voltFrac -= 1; }">
+  <div class="slider round"></div>
+</label>
+</div>
+</form>
+</div>
+<script>
+var voltSign = 1;
+var voltExp = -4;
+var voltFrac = 0; // the "significand"
+function updateVal() {
+  if (voltExp == 3) {
+      if (voltFrac == 0) {
+          newVal = 'Infinity';
+      } else {
+          newVal = 'NaN';
+      }
+  } else {
+      var newVal = Math.pow(10, voltExp) * voltFrac;
+      // if (voltExp < 0) {
+      //     newVal = newVal.toFixed(-voltExp);
+      // }
+      // for (i = 3; i > 0; i--) {
+      //     var fixed = newVal.toFixed(i);
+      //     if (newVal == fixed) {
+      //         newVal = fixed
+      //     }
+      // }
+  }
+  if (voltSign === 1) {
+    newVal = '+' + newVal;
+  } else {
+    newVal = '-' + newVal;
+  }
+  // document.forms[0].elements["exponent"].value = voltExp;
+  document.forms[0].elements["result"].value = newVal;
+  setTimeout(updateVal, 100);
+}
+updateVal();
+
+</script>
+
+<ol>
+    <li>What does the first (blue) top switch do?</li>
+    <li>What's output of each of the three pink bottom switchs?</li>
+    <li>With some of the bottom switches on, what do the other (green) top switches do (hard - hints below)?</li>
+    <li>What are the maximum and minimum values?</li>
+    <li>Is there more than one way to achieve any output voltage?</li>
+    <li>Graph all values you can achieve between 0.01 and 1.</li>
+    <li>Are the fractional values always exact, or are there minor errors?</li>
+    <li>Are there gaps in the scale (can you represent 0.35, or 6,500)?</li>
+    <li>What other values can you find?</li>
+</ol>
+
+<br>
+<p><b>Hints for #3 above:</b><br>
+    <ol>
+    <li>Think about powers of 10 (1, 10, 100...).</li>
+    <li>Think about the Two's Compliment exercise (negative integers)</li>
+    <li>Remember that negative powers of 10 are 0.1, 0.01, 0.001...</li>
+    <li>The bottom (green) switches are called the Mantissa of Significand.</li>
+    <li>Persistence pays off.</li>
+</ol>
+
+</body>
+</html>

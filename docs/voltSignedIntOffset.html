@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signed Voltimeter</title>
+<style>
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin: 0 5px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {display:none;}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+</style>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/highcharts-more.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+</head>
+<body>
+<a href="index.html">home</a>
+<h1>Two's Complement Signed Integer "Voltimeter"</h1>
+<div id="theMeter" style="min-width: 310px; max-width: 400px; height: 300px; margin: 0 auto"></div>
+<script>
+var volts = -8;
+Highcharts.chart('theMeter', {
+    chart: {
+        animation: { duration: 160 },
+        type: 'gauge',
+        plotBackgroundColor: null,
+        plotBackgroundImage: null,
+        plotBorderWidth: 0,
+        plotShadow: false
+    },
+
+    credits: { enabled:false },
+
+    exporting: { enabled:false },
+
+    title: {
+        text: ''
+    },
+
+    pane: {
+        startAngle: -150,
+        endAngle: 150,
+        background: [{
+            backgroundColor: {
+                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                stops: [
+                    [0, '#FFF'],
+                    [1, '#333']
+                ]
+            },
+            borderWidth: 0,
+            outerRadius: '109%'
+        }, {
+            backgroundColor: {
+                linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+                stops: [
+                    [0, '#333'],
+                    [1, '#FFF']
+                ]
+            },
+            borderWidth: 1,
+            outerRadius: '107%'
+        }, {
+            // default background
+        }, {
+            backgroundColor: '#DDD',
+            borderWidth: 0,
+            outerRadius: '105%',
+            innerRadius: '103%'
+        }]
+    },
+
+responsive: {
+  rules: [{
+    condition: {
+      maxWidth: 500
+    },
+    chartOptions: {
+      legend: {
+        enabled: false
+      }
+    }
+  }]
+},
+    // the value axis
+    yAxis: {
+        min: -9,
+        max: 9,
+
+        minorTickInterval: 'auto',
+        minorTickWidth: 1,
+        minorTickLength: 5,
+        minorTickPosition: 'inside',
+        minorTickColor: '#666',
+
+        tickPixelInterval: 30,
+        tickWidth: 2,
+        tickPosition: 'inside',
+        tickLength: 10,
+        tickColor: '#666',
+        labels: {
+            step: 1,
+            rotation: 'auto'
+        },
+        title: {
+            text: 'Volts'
+        },
+        plotBands: [{
+            from: -9,
+            to: -1,
+            color: '#DF5353' // red
+        }, {
+            from: -1,
+            to: 0,
+            color: '#DDDF0D' // yellow
+        }, {
+            from: 0,
+            to: 9,
+            color: '#55BF3B' // green
+        }]
+    },
+
+    series: [{
+        name: 'Output',
+        data: [0],
+        tooltip: {
+            valueSuffix: 'Volts'
+        }
+    }]
+
+},
+// Add some life
+function (chart) {
+    if (!chart.renderer.forExport) {
+        setInterval(function () {
+            var point = chart.series[0].points[0],
+                newVal = volts;
+
+            point.update(newVal);
+
+        }, 100);
+    }
+});
+</script>
+<div style="text-align:center;">
+<form action="#">
+<label class="switch">
+  <input type="checkbox" name="eight" value="8" onClick="if (this.checked) { volts += 8; } else {volts -= 8; }">
+  <div class="slider round"></div>
+</label>
+<label class="switch">
+  <input type="checkbox" name="four" value="4" onClick="if (this.checked) { volts += 4; } else {volts -= 4; }">
+  <div class="slider round"></div>
+</label>
+<label class="switch">
+  <input type="checkbox" name="two" value="2" onClick="if (this.checked) { volts += 2; } else {volts -= 2; }">
+  <div class="slider round"></div>
+</label>
+<label class="switch">
+  <input type="checkbox" name="one" value="1" onClick="if (this.checked) { volts += 1; } else {volts -= 1; }">
+  <div class="slider round"></div>
+</label>
+</form>
+</div>
+
+<ol>
+    <li>What is the starting output (bias) with all switches off (in volts)?</li>
+    <li>How many volts does each switch add?</li>
+    <li>What's the total minimum output?</li>
+    <li>What's the total maximum output?</li>
+    <li>Can you create every positive whole number of volts between the min and max output?</li>
+    <li>Is there more than one way to achieve any output voltage?</li>
+</ol>
+
+</body>
+</html>
