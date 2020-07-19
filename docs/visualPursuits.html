@@ -7,24 +7,27 @@
     </style>
     <title>Visual Pursuits</title>
 </head>
-<body onload="startGame()">
+<body onload="startGame()" onresize="myGameArea.fixWidth()">
 <script>
-    const maxWidth = window.innerWidth;
-    const maxHeight = window.innerHeight;
     const piOverTwo = Math.PI / 2;
     const pieceWidth = 30;
     const pieceHeight = 30;
 
-    const maxX = maxWidth - pieceWidth;
-    const maxY = maxHeight - pieceHeight;
+    let maxX = window.innerWidth - pieceWidth;
+    let maxY = window.innerHeight - pieceHeight;
 
     let myGamePiece;
 
     const myGameArea = {
         canvas : document.createElement("canvas"),
+        fixWidth : function fixWidth() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            maxX = window.innerWidth - pieceWidth;
+            maxY = window.innerHeight - pieceHeight;
+        },
         start : function() {
-            this.canvas.width = maxWidth;
-            this.canvas.height = maxHeight;
+            this.fixWidth();
             this.context = this.canvas.getContext("2d");
             document.body.insertBefore(this.canvas, document.body.childNodes[0]);
             // this.frameNo = 0;
