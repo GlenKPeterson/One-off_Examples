@@ -12,31 +12,38 @@
     const piOverTwo = Math.PI / 2;
     const pieceWidth = 30;
     const pieceHeight = 30;
+    const pieceXOff = pieceWidth / -2;
+    const pieceYOff = pieceHeight / -2;
+    const interval = 17; // refresh speed in ms.
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d");
 
     let maxX = window.innerWidth - pieceWidth;
     let maxY = window.innerHeight - pieceHeight;
 
-    let myGamePiece;
+    let x = maxX / 2;
+    let y = maxY / 2;
 
-    const canvas = document.createElement("canvas")
-    const ctx = canvas.getContext("2d");
+    let speed = 10;
+    let angle = Math.random() * 6.28;
+
+    let myGamePiece;
 
     function fixWidth() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         maxX = window.innerWidth - pieceWidth;
         maxY = window.innerHeight - pieceHeight;
+        if (x > maxX) { x = maxX; }
+        if (y > maxY) { y = maxY; }
+        speed = (maxX + maxY) / (interval * 40);
     }
 
     const myGameArea = {
         start : function() {
             fixWidth();
             document.body.insertBefore(canvas, document.body.childNodes[0]);
-            // this.frameNo = 0;
-            this.interval = setInterval(updateGameArea, 20);
-        },
-        stop : function() {
-            clearInterval(this.interval);
+            setInterval(updateGameArea, 5);
         },
         clear : function() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -44,41 +51,35 @@
     };
 
     function startGame() {
-        myGamePiece = new Component(pieceWidth, pieceHeight, "red", 225, 225);
+        myGamePiece = new Component("red");
         myGameArea.start();
     }
 
 
-    function Component(width, height, color, x, y, type) {
+    function Component(color, type) {
 
         this.type = type;
-        this.width = width;
-        this.height = height;
-        this.speed = 10;
-        this.angle = Math.random() * 6.28;
-        this.x = x;
-        this.y = y;
         this.update = function() {
             ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.angle);
+            ctx.translate(x, y);
+            ctx.rotate(angle);
             ctx.fillStyle = color;
-            ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+            ctx.fillRect(pieceXOff, pieceYOff, pieceWidth, pieceHeight);
             ctx.restore();
         }
         this.newPos = function() {
-            if (this.x > maxX) {
-                this.angle = (Math.random() * Math.PI) + Math.PI;
-            } else if (this.x < 0) {
-                this.angle = (Math.random() * Math.PI);
+            if (x > maxX) {
+                angle = (Math.random() * Math.PI) + Math.PI;
+            } else if (x < 0) {
+                angle = (Math.random() * Math.PI);
             }
-            if (this.y > maxY) {
-                this.angle = (Math.random() * Math.PI) - piOverTwo;
-            } else if (this.y < 0) {
-                this.angle = (Math.random() * Math.PI) + piOverTwo;
+            if (y > maxY) {
+                angle = (Math.random() * Math.PI) - piOverTwo;
+            } else if (y < 0) {
+                angle = (Math.random() * Math.PI) + piOverTwo;
             }
-            this.x += this.speed * Math.sin(this.angle);
-            this.y -= this.speed * Math.cos(this.angle);
+            x += speed * Math.sin(angle);
+            y -= speed * Math.cos(angle);
         }
     }
 
