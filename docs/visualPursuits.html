@@ -49,9 +49,7 @@
      * This is passed to the setInterval function to be performed periodically.
      */
     function updateGameArea() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // New Position
+        // Calculate New Position before clearing it (for smoother animation)
         if (x > maxX) {
             angle = (Math.random() * Math.PI) + Math.PI;
         } else if (x < 0) {
@@ -64,6 +62,9 @@
         }
         x += speed * Math.sin(angle);
         y -= speed * Math.cos(angle);
+
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Update Canvas (with new position)
         ctx.save();
