@@ -11,25 +11,19 @@
 <script>
     const piOverTwo = Math.PI / 2;
     const twoPi = Math.PI * 2;
-    // const pieceWidth = 30;
-    // const pieceHeight = 30;
-    // const pieceXOff = pieceWidth / -2;
-    // const pieceYOff = pieceHeight / -2;
     const pieceRad = 15;
-    const interval = 17; // refresh speed in ms.
+    const interval = 20; // canvas refresh speed in ms.
     const canvas = document.createElement("canvas")
     const ctx = canvas.getContext("2d");
 
-    let maxX = window.innerWidth - pieceRad; //pieceWidth;
-    let maxY = window.innerHeight - pieceRad; //pieceHeight;
+    let maxX = window.innerWidth - pieceRad;
+    let maxY = window.innerHeight - pieceRad;
 
     let x = maxX / 2;
     let y = maxY / 2;
 
     let speed = 10;
     let angle = Math.random() * 6.28;
-
-    let myGamePiece;
 
     /**
      * When viewport size changes, we need to make adjustments to resize canvas
@@ -42,61 +36,41 @@
         maxY = window.innerHeight - pieceRad; //pieceHeight;
         if (x > maxX) { x = maxX; }
         if (y > maxY) { y = maxY; }
-        speed = (maxX + maxY) / (interval * 40);
+        speed = (maxX + maxY) / (interval * 10);
     }
-
-    const myGameArea = {
-        start : function() {
-            fixWidth();
-            document.body.insertBefore(canvas, document.body.childNodes[0]);
-            setInterval(updateGameArea, 5);
-        },
-        clear : function() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-    };
 
     function startGame() {
-        myGamePiece = new Component("DarkGreen");
-        myGameArea.start();
+        fixWidth();
+        document.body.insertBefore(canvas, document.body.childNodes[0]);
+        setInterval(updateGameArea, interval);
     }
 
-
-    function Component(color, type) {
-
-        this.type = type;
-        this.update = function() {
-            ctx.save();
-            // ctx.translate(x, y);
-            // ctx.rotate(angle);
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(x, y, pieceRad, 0, twoPi);
-            ctx.stroke();
-            ctx.fill();
-            // ctx.fillRect(pieceXOff, pieceYOff, pieceWidth, pieceHeight);
-            ctx.restore();
-        }
-        this.newPos = function() {
-            if (x > maxX) {
-                angle = (Math.random() * Math.PI) + Math.PI;
-            } else if (x < 0) {
-                angle = (Math.random() * Math.PI);
-            }
-            if (y > maxY) {
-                angle = (Math.random() * Math.PI) - piOverTwo;
-            } else if (y < 0) {
-                angle = (Math.random() * Math.PI) + piOverTwo;
-            }
-            x += speed * Math.sin(angle);
-            y -= speed * Math.cos(angle);
-        }
-    }
-
+    /**
+     * This is passed to the setInterval function to be performed periodically.
+     */
     function updateGameArea() {
-        myGameArea.clear();
-        myGamePiece.newPos();
-        myGamePiece.update();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // New Position
+        if (x > maxX) {
+            angle = (Math.random() * Math.PI) + Math.PI;
+        } else if (x < 0) {
+            angle = (Math.random() * Math.PI);
+        }
+        if (y > maxY) {
+            angle = (Math.random() * Math.PI) - piOverTwo;
+        } else if (y < 0) {
+            angle = (Math.random() * Math.PI) + piOverTwo;
+        }
+        x += speed * Math.sin(angle);
+        y -= speed * Math.cos(angle);
+
+        // Update Canvas (with new position)
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, pieceRad, 0, twoPi);
+        ctx.fill();
+        ctx.restore();
     }
 
 </script>
