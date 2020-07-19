@@ -11,19 +11,20 @@
 <script>
     const piOverTwo = Math.PI / 2;
     const twoPi = Math.PI * 2;
-    const pieceRad = 15;
     const interval = 20; // canvas refresh speed in ms.
     const canvas = document.createElement("canvas")
     const ctx = canvas.getContext("2d");
 
-    let maxX = window.innerWidth - pieceRad;
-    let maxY = window.innerHeight - pieceRad;
-
+    // Angle in radians
+    let angle = Math.random() * twoPi;
+    // Speed of motion
+    let speed = 0.0;
+    // Size of piece (set as function of screen size).
+    let pieceRad = 0.0;
+    let maxX = 0.0;
+    let maxY = 0.0;
     let x = maxX / 2;
     let y = maxY / 2;
-
-    let speed = 10;
-    let angle = Math.random() * 6.28;
 
     /**
      * When viewport size changes, we need to make adjustments to resize canvas
@@ -32,11 +33,12 @@
     const fixWidth = function() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        maxX = window.innerWidth - pieceRad; //pieceWidth;
-        maxY = window.innerHeight - pieceRad; //pieceHeight;
+        maxX = window.innerWidth - pieceRad;
+        maxY = window.innerHeight - pieceRad;
         if (x > maxX) { x = maxX; }
         if (y > maxY) { y = maxY; }
         speed = (maxX + maxY) / (interval * 10);
+        pieceRad = (maxX + maxY) / 60;
     }
 
     function startGame() {
