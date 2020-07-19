@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body{overflow:hidden;margin:0;}
+    </style>
+    <title>Visual Pursuits</title>
+</head>
+<body onload="startGame()">
+<script>
+    const maxWidth = window.innerWidth;
+    const maxHeight = window.innerHeight;
+    const piOverTwo = Math.PI / 2;
+    const pieceWidth = 30;
+    const pieceHeight = 30;
+
+    const maxX = maxWidth - pieceWidth;
+    const maxY = maxHeight - pieceHeight;
+
+    let myGamePiece;
+
+    const myGameArea = {
+        canvas : document.createElement("canvas"),
+        start : function() {
+            this.canvas.width = maxWidth;
+            this.canvas.height = maxHeight;
+            this.context = this.canvas.getContext("2d");
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            // this.frameNo = 0;
+            this.interval = setInterval(updateGameArea, 20);
+        },
+        stop : function() {
+            clearInterval(this.interval);
+        },
+        clear : function() {
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    };
+
+    function startGame() {
+        myGamePiece = new Component(pieceWidth, pieceHeight, "red", 225, 225);
+        myGameArea.start();
+    }
+
+
+    function Component(width, height, color, x, y, type) {
+
+        this.type = type;
+        this.width = width;
+        this.height = height;
+        this.speed = 10;
+        this.angle = Math.random() * 6.28;
+        this.x = x;
+        this.y = y;
+        this.update = function() {
+            const ctx = myGameArea.context;
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            ctx.fillStyle = color;
+            ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
+            ctx.restore();
+        }
+        this.newPos = function() {
+            if (this.x > maxX) {
+                this.angle = (Math.random() * Math.PI) + Math.PI;
+            } else if (this.x < 0) {
+                this.angle = (Math.random() * Math.PI);
+            }
+            if (this.y > maxY) {
+                this.angle = (Math.random() * Math.PI) - piOverTwo;
+            } else if (this.y < 0) {
+                this.angle = (Math.random() * Math.PI) + piOverTwo;
+            }
+            this.x += this.speed * Math.sin(this.angle);
+            this.y -= this.speed * Math.cos(this.angle);
+        }
+    }
+
+    function updateGameArea() {
+        myGameArea.clear();
+        myGamePiece.newPos();
+        myGamePiece.update();
+    }
+
+</script>
+</body>
+</html>
